@@ -49,13 +49,10 @@ def token_count(text):
 
 def get_prompt(conv: Conversation) -> str:
     if conv.name == 'openchat':
-        ret = ''
-        for role, message in conv.messages:
-            if message:
-                ret += role + ": " + message.strip() + conv.sep
-            else:
-                ret += role + ":"
-        return ret
+        return ''.join(
+            f"{role}: {message.strip()}{conv.sep}" if message else f"{role}:"
+            for role, message in conv.messages
+        )
     else:
         return conv.get_prompt()
 
@@ -79,7 +76,7 @@ def llm_llama(prompt: str) -> str:
     for _ in range(5):
         try:
             response = requests.post(
-                random.choice(CONTROLLER_ADDR) + "/generate",
+                f"{random.choice(CONTROLLER_ADDR)}/generate",
                 json=data,
                 timeout=120,
                 proxies={'http': '', 'https': ''},
@@ -88,7 +85,6 @@ def llm_llama(prompt: str) -> str:
             text = response.json()["generated_text"]
             print(text)
             return text.split('[INST]')[0].split('<|end_of_turn|>')[0].strip()
-        # if timeout or connection error, retry
         except Timeout: 
             print("Timeout, retrying...")
         except ConnectionError:
@@ -127,9 +123,7 @@ class LLMNode(Node):
         assert isinstance(input, self.input_type)
         response = self.call_llm(input, self.stop)
         completion = response["output"]
-        if log:
-            return response
-        return completion
+        return response if log else completion
 
     def call_llm(self, prompt, stop):
         if self.model_name in OPENAI_COMPLETION_MODELS:
@@ -200,7 +194,7 @@ class LLMNode(Node):
                 conv.set_system_message("You are a helpful, respectful and honest assistant.")
             elif 'vicuna' in self.model_name:
                 conv = get_conversation_template('vicuna')
-            elif 'openchat' in self.model_name:
+            else:
                 conv = Conversation(
                     name="openchat",
                     roles=("GPT4 User", "GPT4 Assistant"),
@@ -209,8 +203,6 @@ class LLMNode(Node):
                     sep_style=SeparatorStyle.ADD_COLON_SINGLE,
                     sep="<|end_of_turn|>",
                 )
-            else:
-                raise NotImplementedError
             conv.append_message(conv.roles[0], prompt)
             conv.append_message(conv.roles[1], None)
             output = llm_llama(get_prompt(conv))

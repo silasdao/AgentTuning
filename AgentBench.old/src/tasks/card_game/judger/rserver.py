@@ -115,8 +115,8 @@ class RServer():
             async for message in websocket:
                 try:
                     data = json.loads(message)
-                    token = data["token"]
                     if data["request"] == "connect":
+                        token = data["token"]
                         flag = self.player_connect(websocket, token)
                         if not flag:
                             break

@@ -99,11 +99,6 @@ class Container:
 
     def execute(self, sql: str, database: str = None, truncate: bool = True, verbose: bool = True,
                 no_except: bool = False) -> Optional[str]:
-        if verbose:
-            # print("== EXECUTING ==")
-            if len(sql) < 300:
-                pass
-                # print(sql)
         self.conn.reconnect()
         try:
             with self.conn.cursor() as cursor:
@@ -118,15 +113,8 @@ class Container:
             if no_except:
                 raise
             result = str(e)
-        if verbose:
-            if len(result) < 200:
-                pass
-                # print(result)
-            else:
-                pass
-                # print("len result:", len(result))
         if len(result) > 800 and truncate:
-            result = result[:800] + "[TRUNCATED]"
+            result = f"{result[:800]}[TRUNCATED]"
         if not sql.lower().startswith("select"):
             pass  # IMPORTANT: if `execute` is called in a high rate, here must wait for the transaction
             # time.sleep(0.5)     # insure transaction is done

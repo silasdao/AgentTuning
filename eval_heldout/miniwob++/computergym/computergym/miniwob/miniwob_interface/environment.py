@@ -119,9 +119,7 @@ class MiniWoBEnvironment(object):
         """
         assert len(actions) == len(
             self.instances
-        ), "len(action) is {} but there are {} instances".format(
-            len(actions), len(self.instances)
-        )
+        ), f"len(action) is {len(actions)} but there are {len(self.instances)} instances"
         # Initialize with reasonable values
         states: list[Union[None, MiniWoBState]] = [None] * len(self.instances)
         rewards = [-1.0] * len(self.instances)
@@ -180,7 +178,7 @@ def test_environment():
     try:
         task_name = sys.argv[1]
     except IndexError:
-        print("Usage: python {} TASK_NAME".format(sys.argv[0]))
+        print(f"Usage: python {sys.argv[0]} TASK_NAME")
         exit(1)
     env = MiniWoBEnvironment(task_name)
     base_url = os.environ.get("MINIWOB_BASE_URL")

@@ -40,21 +40,20 @@ def build_sql(entry, conn):
         item = "("
         for col in row:
             item += f"'{escape(col, conn)}',"
-        item = item[:-1] + ")"
+        item = f"{item[:-1]})"
         items.append(item)
     items = ",".join(items)
-    sql = f"""CREATE DATABASE IF NOT EXISTS `{name}`;
+    return f"""CREATE DATABASE IF NOT EXISTS `{name}`;
 USE `{name}`;
 CREATE TABLE IF NOT EXISTS `{name}` ({columns});
 INSERT INTO `{name}` ({column_names}) VALUES {items}; 
 COMMIT;
 """
-    return sql
 
 
 def escape(string: str, conn):
     if type(string) is not str:
-        string = str(string)
+        string = string
     return conn._cmysql.escape_string(string).decode("utf-8")
 
 
@@ -86,8 +85,7 @@ def process(receiver, max_round):
                     break
                 sql = res.group(1).strip()
                 sql = sql.replace("\n", " ")
-                response = container.execute(sql, db)
-                if response:
+                if response := container.execute(sql, db):
                     session.inject({"role": "user", "content": response})
                 else:
                     session.inject({"role": "user", "content": ""})
@@ -96,10 +94,7 @@ def process(receiver, max_round):
                 rounds += 1
             else:
                 answer = re.search(r"\nFinal Answer:(.*)", res)
-                if answer:
-                    answer = answer.group(1)
-                else:
-                    answer = ""
+                answer = answer.group(1) if answer else ""
         except Exception as e:
             error = str(e)
             answer = ""
@@ -128,7 +123,7 @@ class DBBench(Task[Dict, Dict[str, Any], str]):
         self.max_round = configs.pop("max_round", 5)
         self.processes = []
         ctx = mp.get_context('spawn')
-        for i in range(self.workers):
+        for _ in range(self.workers):
             receiver, sender = ctx.Pipe(False)
             p = ctx.Process(target=process, args=(receiver, self.max_round))
             p.start()
@@ -137,7 +132,7 @@ class DBBench(Task[Dict, Dict[str, Any], str]):
     def escape(self, string: str, conn=None):
         conn = conn or self.conn
         if type(string) is not str:
-            string = str(string)
+            string = string
         return conn._cmysql.escape_string(string).decode("utf-8")
 
     def get_data(self) -> Dataset[Dict, str]:
@@ -182,7 +177,7 @@ class DBBench(Task[Dict, Dict[str, Any], str]):
                     if not entry:
                         continue
                     ans, t = entry["answer"], entry["type"]
-                    if t != typ and not (typ == "SELECT" and t not in ("INSERT", "UPDATE")):
+                    if t != typ and (typ != "SELECT" or t in ("INSERT", "UPDATE")):
                         continue
                     if t in ("INSERT", "DELETE", "UPDATE"):
                         correct += ans == cor
@@ -218,10 +213,15 @@ class DBBench(Task[Dict, Dict[str, Any], str]):
 
         ret = {}
         for typ in types:
-            ret[typ + "_accuracy"] = factory(typ)
+            ret[f"{typ}_accuracy"] = factory(typ)
 
-        ret["overall_cat_accuracy"] = lambda inp, tar: sum([ret[typ + "_accuracy"](inp, tar)
-                                                            for typ in ("SELECT", "INSERT", "UPDATE")]) / 3
+        ret["overall_cat_accuracy"] = lambda inp, tar: (
+            sum(
+                ret[f"{typ}_accuracy"](inp, tar)
+                for typ in ("SELECT", "INSERT", "UPDATE")
+            )
+            / 3
+        )
 
         def average_round(inp: List[Dict[str, Any]], tar: List[str]) -> float:
             count = 0

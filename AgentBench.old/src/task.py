@@ -90,17 +90,16 @@ class Task(Generic[T_INPUT, T_OUTPUT, T_TARGET]):
             results = self.predict_all(agent, inputs, already_runs)
         except:
             results = self.predict_all(agent, inputs)
-        # print(results)
-        # print(type(results))
-        result_dict = {}
-        for metric in self.metrics:
-            result_dict[metric] = self.metrics[metric](results, targets)
+        result_dict = {
+            metric: self.metrics[metric](results, targets)
+            for metric in self.metrics
+        }
         print(f"Task '{self.name}' evaluation finished. The results are saved in '{self.get_output_dir()}'")
         self.save_runs_all(inputs, results, targets, result_dict)
         return result_dict
 
     def predict_all(self, agent: Agent, inputs: List[T_INPUT], already_runs: List[Any]=None) -> List[T_OUTPUT]:
-        print(f"Start Predicting All ...")
+        print("Start Predicting All ...")
         assert already_runs is None or len(already_runs) == len(inputs)
 
         thread_count = self.workers
@@ -120,7 +119,6 @@ class Task(Generic[T_INPUT, T_OUTPUT, T_TARGET]):
             except Exception as e:
                 import traceback
                 traceback.print_exc()
-                pass
             results[index] = result
 
         for idx, item in enumerate(inputs):
@@ -129,7 +127,7 @@ class Task(Generic[T_INPUT, T_OUTPUT, T_TARGET]):
                 continue
             future = executor.submit(call_wrap, item, idx)
             threads.append(future)
-        
+
         with tqdm(total=len(inputs)) as pbar:
             for thread in as_completed(threads):
                 pbar.update(1)
@@ -177,7 +175,9 @@ class Task(Generic[T_INPUT, T_OUTPUT, T_TARGET]):
             Default output directory is: outputs/{time_str}/{name or category}
         """
         if not self.output_root_dir:
-            self.output_root_dir = "outputs/%s" % datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+            self.output_root_dir = (
+                f'outputs/{datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")}'
+            )
         return os.path.join(self.output_root_dir, self.category or self.name or "default")
 
     @property

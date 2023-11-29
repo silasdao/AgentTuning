@@ -113,7 +113,7 @@ class MiniWoBState(object):
         return self._dom_elements
 
     def __str__(self):
-        return "MiniWoBState(utterance: {})".format(repr(self.utterance))
+        return f"MiniWoBState(utterance: {repr(self.utterance)})"
 
     __repr__ = __str__
 
@@ -156,10 +156,7 @@ class DOMElement(object):
         self._ref = raw_dom.get("ref")
         if self.tag == "t":
             self._ref = None  # ignore refs for text, since they are unreliable
-        if "text" in raw_dom:
-            self._text = str(raw_dom["text"])
-        else:
-            self._text = None
+        self._text = str(raw_dom["text"]) if "text" in raw_dom else None
         self._value = raw_dom.get("value")
         self._id = raw_dom.get("id")
         classes = raw_dom.get("classes", "TEXT_CLASS")
@@ -176,10 +173,10 @@ class DOMElement(object):
         # Recurse on the children
         self._children = []
 
-        for raw_child in raw_dom["children"]:
-            self._children.append(
-                DOMElement(raw_child, parent=self, dom_elements=dom_elements)
-            )
+        self._children.extend(
+            DOMElement(raw_child, parent=self, dom_elements=dom_elements)
+            for raw_child in raw_dom["children"]
+        )
         # Fix a bug where sometimes children are created even though all children are <t>
         # (which will incorrectly make this element a non-leaf and thus unclickable)
         if self._children and all(child.tag == "t" for child in self._children):
@@ -190,9 +187,7 @@ class DOMElement(object):
             dom_elements.append(self)
 
     def __eq__(self, other):
-        if not isinstance(other, DOMElement):
-            return False
-        return self.ref == other.ref
+        return False if not isinstance(other, DOMElement) else self.ref == other.ref
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -348,15 +343,15 @@ class DOMElement(object):
     def __str__(self):
         if self.text:
             text = self.text
-            text = text[:20] + "..." if len(text) > 20 else text
-            text_str = " text={}".format(repr(text))
+            text = f"{text[:20]}..." if len(text) > 20 else text
+            text_str = f" text={repr(text)}"
         else:
             text_str = ""
 
-        value_str = " value={}".format(self.value) if self.value is not None else ""
-        classes_str = " classes=[{}]".format(self.classes)
+        value_str = f" value={self.value}" if self.value is not None else ""
+        classes_str = f" classes=[{self.classes}]"
         num_children = len(self.children)
-        children_str = " children={}".format(num_children) if num_children != 0 else ""
+        children_str = f" children={num_children}" if num_children != 0 else ""
 
         return "[{ref}] {tag} @ ({left}, {top}){text}{value}{classes}{children}".format(
             ref=self.ref,
@@ -373,12 +368,11 @@ class DOMElement(object):
 
     def visualize(self, join=True):
         """Return a string visualizing the tree structure."""
-        lines = []
-        lines.append("- {}".format(self))
+        lines = [f"- {self}"]
         for i, child in enumerate(self.children):
             if isinstance(child, str):
-                child = child[:20] + "..." if len(child) > 20 else child
-                lines.append('  |- "{}"'.format(child))
+                child = f"{child[:20]}..." if len(child) > 20 else child
+                lines.append(f'  |- "{child}"')
             else:
                 for j, line in enumerate(child.visualize(join=False)):
                     prefix = "   " if (i == len(self.children) - 1 and j) else "  |"
@@ -409,10 +403,7 @@ class DOMElement(object):
                 return self.ancestor_path[i - 1]
 
         raise ValueError(
-            (
-                "{} is not in the same DOM tree as {}\n\nself tree: {}\n\n"
-                "other tree: {}"
-            ).format(self, other, self.visualize(), other.visualize())
+            f"{self} is not in the same DOM tree as {other}\n\nself tree: {self.visualize()}\n\nother tree: {other.visualize()}"
         )
 
     def diff(self, other_dom):

@@ -40,10 +40,9 @@ class EncoderRNN(nn.Module):
         for i in range(nlayers):
             if i == 0:
                 input_size_ = input_size
-                output_size_ = num_units
             else:
                 input_size_ = num_units if not bidir else num_units * 2
-                output_size_ = num_units
+            output_size_ = num_units
             self.rnns.append(
                 nn.GRU(input_size_, output_size_, 1,
                        bidirectional=bidir, batch_first=True))
@@ -81,9 +80,7 @@ class EncoderRNN(nn.Module):
             inputs = self.norm(inputs)
         output = inputs
         outputs = []
-        lens = 0
-        if input_lengths is not None:
-            lens = input_lengths  # .data.cpu().numpy()
+        lens = input_lengths if input_lengths is not None else 0
         for i in range(self.nlayers):
             hidden = self.get_init(bsz, i)
             # output = self.dropout(output)
@@ -112,9 +109,7 @@ class EncoderRNN(nn.Module):
                     hidden.permute(1, 0, 2).contiguous().view(bsz, -1))
             else:
                 outputs.append(output)
-        if self.concat:
-            return torch.cat(outputs, dim=2)
-        return outputs[-1]
+        return torch.cat(outputs, dim=2) if self.concat else outputs[-1]
 
 
 class BiAttention(nn.Module):

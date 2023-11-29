@@ -12,19 +12,12 @@ from transfer.predict_help import (
 
 @requests_mock.Mocker(kw="mock")
 def test_parse_item_page_ws(**kwargs):
-    # Read mock response data
-    mock_file = open("tests/transfer/mocks/mock_parse_item_page_ws", "rb")
-    mock_body = mock_file.read()
-    mock_file.close()
-
-    mock_desc_file = open("tests/transfer/mocks/mock_parse_item_page_ws_desc", "rb")
-    mock_desc_body = mock_desc_file.read()
-    mock_desc_file.close()
-
-    mock_feat_file = open("tests/transfer/mocks/mock_parse_item_page_ws_feat", "rb")
-    mock_feat_body = mock_feat_file.read()
-    mock_feat_file.close()
-
+    with open("tests/transfer/mocks/mock_parse_item_page_ws", "rb") as mock_file:
+        mock_body = mock_file.read()
+    with open("tests/transfer/mocks/mock_parse_item_page_ws_desc", "rb") as mock_desc_file:
+        mock_desc_body = mock_desc_file.read()
+    with open("tests/transfer/mocks/mock_parse_item_page_ws_feat", "rb") as mock_feat_file:
+        mock_feat_body = mock_feat_file.read()
     mock_asin = "B09P87V3LZ"
     mock_query = "red basketball shoes"
     mock_options = {}
@@ -116,10 +109,8 @@ def test_parse_item_page_ws(**kwargs):
 
 @requests_mock.Mocker(kw="mock")
 def test_parse_item_page_ebay(**kwargs):
-    # Read mock response data
-    mock_file = open("tests/transfer/mocks/mock_parse_item_page_ebay", "rb")
-    mock_body = mock_file.read()
-    mock_file.close()
+    with open("tests/transfer/mocks/mock_parse_item_page_ebay", "rb") as mock_file:
+        mock_body = mock_file.read()
     mock_asin = "403760625150"
 
     # Invoke function, check response
@@ -161,10 +152,8 @@ def test_parse_item_page_ebay(**kwargs):
 
 @requests_mock.Mocker(kw="mock")
 def test_parse_item_page_amz(**kwargs):
-    # Read mock response data
-    mock_file = open("tests/transfer/mocks/mock_parse_item_page_amz", "rb")
-    mock_body = mock_file.read()
-    mock_file.close()
+    with open("tests/transfer/mocks/mock_parse_item_page_amz", "rb") as mock_file:
+        mock_body = mock_file.read()
     mock_asin = "B073WRF565"
 
     # Invoke function, check response
@@ -191,133 +180,127 @@ def test_parse_item_page_amz(**kwargs):
 
 @requests_mock.Mocker(kw="mock")
 def test_parse_results_ebay(**kwargs):
-    # Read mock response data
-    mock_file = open("tests/transfer/mocks/mock_parse_results_ebay", "rb")
-    mock_body = mock_file.read()
-    mock_file.close()
+    with open("tests/transfer/mocks/mock_parse_results_ebay", "rb") as mock_file:
+        mock_body = mock_file.read()
     mock_query = "red basketball shoes"
-    
+
     # Invoke function, check response
     query = mock_query.replace(" ", "+")
     kwargs["mock"].get(f'https://www.ebay.com/sch/i.html?_nkw={query}&_pgn=1', content=mock_body)
     output = parse_results_ebay(mock_query, 1)
     expected = [{
-		'Price': ['100.00', '150.00'],
-		'Title': "Reebok Answer IV Men's Basketball Shoes",
-		'asin': '175065123030'
-	}, {
-		'Price': '$119.90',
-		'Title': "Air Jordan Stay Loyal Shoes Black Red White DB2884-001 Men's Multi "
-		'Size NEW',
-		'asin': '265672133690'
-	}, {
-		'Price': '$100.00',
-		'Title': "Fila Men's Stackhouse Spaghetti Basketball Shoes Black Red White "
-		'1BM01788-113',
-		'asin': '175282509234'
-	}, {
-		'Price': ['61.99',
-			'85.99'
-		],
-		'Title': 'Puma Disc Rebirth 19481203 Mens Black Red Synthetic Athletic '
-		'Basketball Shoes',
-		'asin': '313944854658'
-	}, {
-		'Price': '$0.01',
-		'Title': "Puma RS-Dreamer J. Cole Basketball Shoes Red 193990-16 Men's Size "
-		'10.0',
-		'asin': '403760625150'
-	}, {
-		'Price': '$45.00',
-		'Title': 'Nike Mens 9.5 PG 5  Maroon Red White Basketball Shoes Sneaker DM '
-		'5045–601￼ Flaw',
-		'asin': '115456853186'
-	}, {
-		'Price': ['114.90',
-			'119.90'
-		],
-		'Title': "Air Jordan Stay Loyal Shoes White Black Red DB2884-106 Men's Multi "
-		'Size NEW',
-		'asin': '155046831159'
-	}, {
-		'Price': '$8.99',
-		'Title': "Harden Volume 3 Men's Basketball Shoes Size 9.5",
-		'asin': '175342407862'
-	}, {
-		'Price': '$59.97',
-		'Title': "Men's Nike Precision 5 Basketball Shoes Gym Red Black Grey Bred "
-		'Multi Size NEW',
-		'asin': '134149634710'
-	}]
+    	'Price': ['100.00', '150.00'],
+    	'Title': "Reebok Answer IV Men's Basketball Shoes",
+    	'asin': '175065123030'
+    }, {
+    	'Price': '$119.90',
+    	'Title': "Air Jordan Stay Loyal Shoes Black Red White DB2884-001 Men's Multi "
+    	'Size NEW',
+    	'asin': '265672133690'
+    }, {
+    	'Price': '$100.00',
+    	'Title': "Fila Men's Stackhouse Spaghetti Basketball Shoes Black Red White "
+    	'1BM01788-113',
+    	'asin': '175282509234'
+    }, {
+    	'Price': ['61.99',
+    		'85.99'
+    	],
+    	'Title': 'Puma Disc Rebirth 19481203 Mens Black Red Synthetic Athletic '
+    	'Basketball Shoes',
+    	'asin': '313944854658'
+    }, {
+    	'Price': '$0.01',
+    	'Title': "Puma RS-Dreamer J. Cole Basketball Shoes Red 193990-16 Men's Size "
+    	'10.0',
+    	'asin': '403760625150'
+    }, {
+    	'Price': '$45.00',
+    	'Title': 'Nike Mens 9.5 PG 5  Maroon Red White Basketball Shoes Sneaker DM '
+    	'5045–601￼ Flaw',
+    	'asin': '115456853186'
+    }, {
+    	'Price': ['114.90',
+    		'119.90'
+    	],
+    	'Title': "Air Jordan Stay Loyal Shoes White Black Red DB2884-106 Men's Multi "
+    	'Size NEW',
+    	'asin': '155046831159'
+    }, {
+    	'Price': '$8.99',
+    	'Title': "Harden Volume 3 Men's Basketball Shoes Size 9.5",
+    	'asin': '175342407862'
+    }, {
+    	'Price': '$59.97',
+    	'Title': "Men's Nike Precision 5 Basketball Shoes Gym Red Black Grey Bred "
+    	'Multi Size NEW',
+    	'asin': '134149634710'
+    }]
     assert output == expected
 
 @requests_mock.Mocker(kw="mock")
 def test_parse_results_amz(**kwargs):
-    # Read mock response data
-    mock_file = open("tests/transfer/mocks/mock_parse_results_amz", "rb")
-    mock_body = mock_file.read()
-    mock_file.close()
+    with open("tests/transfer/mocks/mock_parse_results_amz", "rb") as mock_file:
+        mock_body = mock_file.read()
     mock_query = "red basketball shoes"
-    
+
     # Invoke function, check response
     query = mock_query.replace(" ", "+")
     kwargs["mock"].get(f"https://www.amazon.com/s?k={query}&page=1", content=mock_body)
     output = parse_results_amz(mock_query, 1)
     expected = [{
-		'Price': '59.49',
-		'Title': 'High Top Mens Basketball Shoes Lou Williams Streetball Master ' 
-			'Breathable Non Slip Outdoor Sneakers Cushioning Workout Shoes for ' 
-			'Fitness',
-		'asin': 'B083QCWF61'
-	}, {
-		'Price': '45.99',
-		'Title': 'Kids Basketball Shoes High-top Sports Shoes Sneakers Durable '
-		'Lace-up Non-Slip Running Shoes Secure for Little Kids Big Kids and '
-		'Boys Girls',
-		'asin': 'B08FWWWQ11'
-	}, {
-		'Price': '64.99',
-		'Title': 'Unisex-Adult Lockdown 5 Basketball Shoe',
-		'asin': 'B0817BFNC4'
-	}, {
-		'Price': '63.75',
-		'Title': 'Unisex-Child Team Hustle D 9 (Gs) Sneaker',
-		'asin': 'B07HHTS79M'
-	}, {
-		'Price': '74.64',
-		'Title': 'Unisex-Adult D.O.N. Issue 3 Basketball Shoe',
-		'asin': 'B08N8DQLS2'
-	}, {
-		'Price': '104.90',
-		'Title': "Men's Lebron Witness IV Basketball Shoes",
-		'asin': 'B07TKMMHVB'
-	}, {
-		'Price': '36.68',
-		'Title': "Unisex-Child Pre-School Jet '21 Basketball Shoe",
-		'asin': 'B08N6VRHV4'
-	}, {
-		'Price': '59.98',
-		'Title': "Men's Triple Basketball Shoe",
-		'asin': 'B08QCL8VKM'
-	}, {
-		'Price': '45.98',
-		'Title': 'Unisex-Child Pre School Lockdown 4 Basketball Shoe',
-		'asin': 'B07HKP12DH'
-	}, {
-		'Price': '143.72',
-		'Title': "Men's Basketball Shoes",
-		'asin': 'B07SNR7HRF'
-	}]
+    	'Price': '59.49',
+    	'Title': 'High Top Mens Basketball Shoes Lou Williams Streetball Master ' 
+    		'Breathable Non Slip Outdoor Sneakers Cushioning Workout Shoes for ' 
+    		'Fitness',
+    	'asin': 'B083QCWF61'
+    }, {
+    	'Price': '45.99',
+    	'Title': 'Kids Basketball Shoes High-top Sports Shoes Sneakers Durable '
+    	'Lace-up Non-Slip Running Shoes Secure for Little Kids Big Kids and '
+    	'Boys Girls',
+    	'asin': 'B08FWWWQ11'
+    }, {
+    	'Price': '64.99',
+    	'Title': 'Unisex-Adult Lockdown 5 Basketball Shoe',
+    	'asin': 'B0817BFNC4'
+    }, {
+    	'Price': '63.75',
+    	'Title': 'Unisex-Child Team Hustle D 9 (Gs) Sneaker',
+    	'asin': 'B07HHTS79M'
+    }, {
+    	'Price': '74.64',
+    	'Title': 'Unisex-Adult D.O.N. Issue 3 Basketball Shoe',
+    	'asin': 'B08N8DQLS2'
+    }, {
+    	'Price': '104.90',
+    	'Title': "Men's Lebron Witness IV Basketball Shoes",
+    	'asin': 'B07TKMMHVB'
+    }, {
+    	'Price': '36.68',
+    	'Title': "Unisex-Child Pre-School Jet '21 Basketball Shoe",
+    	'asin': 'B08N6VRHV4'
+    }, {
+    	'Price': '59.98',
+    	'Title': "Men's Triple Basketball Shoe",
+    	'asin': 'B08QCL8VKM'
+    }, {
+    	'Price': '45.98',
+    	'Title': 'Unisex-Child Pre School Lockdown 4 Basketball Shoe',
+    	'asin': 'B07HKP12DH'
+    }, {
+    	'Price': '143.72',
+    	'Title': "Men's Basketball Shoes",
+    	'asin': 'B07SNR7HRF'
+    }]
     assert output == expected
 
 @requests_mock.Mocker(kw="mock")
 def test_parse_results_ws(**kwargs):
-    # Read mock response data
-    mock_file = open("tests/transfer/mocks/mock_parse_results_ws", "rb")
-    mock_body = mock_file.read()
-    mock_file.close()
+    with open("tests/transfer/mocks/mock_parse_results_ws", "rb") as mock_file:
+        mock_body = mock_file.read()
     mock_query = "red basketball shoes"
-    
+
     # Invoke function, check response
     query_str = mock_query.replace(" ", "+")
     url = (

@@ -131,10 +131,7 @@ def parse_action(action):
 def convert_web_app_string_to_var(name, string):
     if name == 'keywords':
         keywords = string
-        if keywords.startswith('['):
-            keywords = literal_eval(keywords)
-        else:
-            keywords = [keywords]
+        keywords = literal_eval(keywords) if keywords.startswith('[') else [keywords]
         var = keywords
     elif name == 'page':
         page = string
@@ -153,24 +150,27 @@ def get_top_n_product_from_keywords(
         attribute_to_asins=None,
     ):
     if keywords[0] == '<r>':
-        top_n_products = random.sample(all_products, k=SEARCH_RETURN_N)
+        return random.sample(all_products, k=SEARCH_RETURN_N)
     elif keywords[0] == '<a>':
         attribute = ' '.join(keywords[1:]).strip()
         asins = attribute_to_asins[attribute]
-        top_n_products = [p for p in all_products if p['asin'] in asins]
+        return [p for p in all_products if p['asin'] in asins]
     elif keywords[0] == '<c>':
         category = keywords[1].strip()
-        top_n_products = [p for p in all_products if p['category'] == category]
+        return [p for p in all_products if p['category'] == category]
     elif keywords[0] == '<q>':
         query = ' '.join(keywords[1:]).strip()
-        top_n_products = [p for p in all_products if p['query'] == query]
+        return [p for p in all_products if p['query'] == query]
     else:
         keywords = ' '.join(keywords)
         hits = search_engine.search(keywords, k=SEARCH_RETURN_N)
         docs = [search_engine.doc(hit.docid) for hit in hits]
         top_n_asins = [json.loads(doc.raw())['id'] for doc in docs]
-        top_n_products = [product_item_dict[asin] for asin in top_n_asins if asin in product_item_dict]
-    return top_n_products
+        return [
+            product_item_dict[asin]
+            for asin in top_n_asins
+            if asin in product_item_dict
+        ]
 
 
 def get_product_per_page(top_n_products, page):
@@ -203,8 +203,7 @@ def init_search_engine(num_products=None):
         indexes = 'indexes'
     else:
         raise NotImplementedError(f'num_products being {num_products} is not supported yet.')
-    search_engine = LuceneSearcher(os.path.join(BASE_DIR, f'../search_engine/{indexes}'))
-    return search_engine
+    return LuceneSearcher(os.path.join(BASE_DIR, f'../search_engine/{indexes}'))
 
 
 def clean_product_keys(products):
@@ -233,7 +232,7 @@ def load_products(filepath, num_products=None, human_goals=True):
         products = json.load(f)
     print('Products loaded.')
     products = clean_product_keys(products)
-    
+
     # with open(DEFAULT_REVIEW_PATH) as f:
     #     reviews = json.load(f)
     all_reviews = dict()
@@ -278,10 +277,7 @@ def load_products(filepath, num_products=None, human_goals=True):
         for r in products[i]['Reviews']:
             if 'score' not in r:
                 r['score'] = r.pop('stars')
-            if 'review' not in r:
-                r['body'] = ''
-            else:
-                r['body'] = r.pop('review')
+            r['body'] = '' if 'review' not in r else r.pop('review')
         products[i]['BulletPoints'] = p['small_description'] \
             if isinstance(p['small_description'], list) else [p['small_description']]
 
@@ -303,9 +299,8 @@ def load_products(filepath, num_products=None, human_goals=True):
         products[i]['Price'] = price_tag
 
         options = dict()
-        customization_options = p['customization_options']
         option_to_image = dict()
-        if customization_options:
+        if customization_options := p['customization_options']:
             for option_name, option_contents in customization_options.items():
                 if option_contents is None:
                     continue
@@ -337,7 +332,7 @@ def load_products(filepath, num_products=None, human_goals=True):
             products[i]['Attributes'] = attributes[asin]['attributes']
         else:
             products[i]['Attributes'] = ['DUMMY_ATTR']
-            
+
         if human_goals:
             if asin in human_attributes:
                 products[i]['instructions'] = human_attributes[asin]

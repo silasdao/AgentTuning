@@ -26,17 +26,15 @@ def build_images(force=False):
             dockerfile_path = os.path.join(dockerfile_directory, filename)
             try:
                 image = client.images.get(image_name)
-                if not force:
-                    # Check if the dockerfile has changed
-                    if image.labels.get('file_hash') != get_file_hash(dockerfile_path):
-                        # If dockerfile has changed, rebuild image
-                        print(f'Rebuilding image: {image_name}')
-                        client.images.build(path=dockerfile_directory, dockerfile=filename, tag=image_name, labels={'file_hash': get_file_hash(dockerfile_path)})
-                    else:
-                        print(f'Image: {image_name} up to date.')
-                else:
+                if force:
                     print(f'Rebuilding image: {image_name}')
                     client.images.build(path=dockerfile_directory, dockerfile=filename, tag=image_name, labels={'file_hash': get_file_hash(dockerfile_path)})
+                elif image.labels.get('file_hash') != get_file_hash(dockerfile_path):
+                    # If dockerfile has changed, rebuild image
+                    print(f'Rebuilding image: {image_name}')
+                    client.images.build(path=dockerfile_directory, dockerfile=filename, tag=image_name, labels={'file_hash': get_file_hash(dockerfile_path)})
+                else:
+                    print(f'Image: {image_name} up to date.')
             except docker.errors.ImageNotFound:
                 # If image does not exist, build it
                 print(f'Building image: {image_name}')

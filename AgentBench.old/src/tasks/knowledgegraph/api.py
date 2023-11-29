@@ -10,7 +10,7 @@ from .utils.logic_form_util import postprocess_raw_code, lisp_to_sparql, range_i
 
 path = str(Path(__file__).parent.absolute())
 
-with open(path + "/ontology/vocab.json") as f:
+with open(f"{path}/ontology/vocab.json") as f:
     vocab = json.load(f)
     attributes = vocab["attributes"]
     relations = vocab["relations"]
@@ -38,9 +38,7 @@ def final_execute(variable: Variable, sparql_executor):
     processed_code = postprocess_raw_code(program)
     sparql_query = lisp_to_sparql(processed_code)
 
-    results = sparql_executor.execute_query(sparql_query)
-
-    return results
+    return sparql_executor.execute_query(sparql_query)
 
 def get_relations(variable: Union[Variable, str], sparql_executor):
     """
@@ -81,7 +79,7 @@ def get_relations(variable: Union[Variable, str], sparql_executor):
     return None, rtn_str
       
 
-def get_neighbors(variable: Union[Variable, str], relation: str, sparql_executor):  # will create a new variable
+def get_neighbors(variable: Union[Variable, str], relation: str, sparql_executor):    # will create a new variable
     """
     Get all neighbors of a variable
     :param variable: a variable, here a variable is represented as its program derivation
@@ -91,14 +89,16 @@ def get_neighbors(variable: Union[Variable, str], relation: str, sparql_executor
     if not isinstance(variable, Variable):
         if not re.match(r'^(m|f)\.[\w_]+$', variable):
             raise ValueError("get_neighbors: variable must be a variable or an entity")
-    if not relation in variable_relations_cache[variable]:
+    if relation not in variable_relations_cache[variable]:
         raise ValueError("get_neighbors: relation must be a relation of the variable")
-        
+
 
     rtn_str = f"Observation: variable ##, which are instances of {range_info[relation]}"
 
-    new_variable = Variable(range_info[relation], 
-                            f"(JOIN {relation + '_inv'} {variable.program if isinstance(variable, Variable) else variable})")
+    new_variable = Variable(
+        range_info[relation],
+        f"(JOIN {relation}_inv {variable.program if isinstance(variable, Variable) else variable})",
+    )
 
     return new_variable, rtn_str
 
@@ -145,7 +145,7 @@ def count(variable: Variable, sparql_executor):
     :param variable: a variable
     :return: the number of a variable
     """
-    rtn_str = f"Observation: variable ##, which is a number"
+    rtn_str = "Observation: variable ##, which is a number"
     new_variable = Variable("type.int", f"(COUNT {variable.program})")
     return new_variable, rtn_str
 

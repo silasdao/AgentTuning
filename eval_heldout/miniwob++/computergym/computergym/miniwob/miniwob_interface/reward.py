@@ -49,4 +49,4 @@ def get_reward_processor(config):
     elif config.type == "click_checkboxes_hard":
         return get_click_checkboxes_hard
     else:
-        raise ValueError("{} not a valid reward processor type".format(config.type))
+        raise ValueError(f"{config.type} not a valid reward processor type")

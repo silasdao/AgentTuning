@@ -10,7 +10,7 @@ class AI(AIClient):
         super().__init__()
         self.stage = stage
         # self.enemy_atk_record = [0, 0, 0, 0]
-        self.has_failed = [[False for i in range(5)] for j in range(4)]
+        self.has_failed = [[False for _ in range(5)] for _ in range(4)]
         self.last_fish = -1
         self.last_type = -1
         self.skill_type = {'skill_type.aoe': 'AOE', 'skill_type.infight': 'Infight', 'skill_type.normalattack': 'Normal'}
@@ -18,16 +18,10 @@ class AI(AIClient):
         self.to_assert = {0: {"skill":-1, "passive":-1}, 1: {"skill":-1, "passive":-1}, 2: {"skill":-1, "passive":-1}, 3: {"skill":-1, "passive":-1}}
 
     def Pick(self, game: Game) -> List[int]:
-        pick_list = [1, 2, 3, 4]
-        #random.shuffle(pick_list)
-        return pick_list
+        return [1, 2, 3, 4]
     
     def _non_zero_indexes(self, lst):
-        result = []
-        for i in range(len(lst)):
-            if lst[i] != 0:
-                result.append(i)
-        return result
+        return [i for i in range(len(lst)) if lst[i] != 0]
     # skill : 0 : aoe, 1 : infight
     # passive : 0 : counter, 1 : deflect
     def add_possible(self, fish, type, val):
@@ -48,17 +42,15 @@ class AI(AIClient):
         return (fish, type)
     
     def Assert(self, game: Game) -> Tuple[int, int]:
-        if self.stage == 1:
-            return (-1, -1)
-        else:
+        if self.stage != 1:
             # 如果在需要 assert 的列表中
             enemy_action = game.enemy_action
             my_action = game.my_action
             my_assert = game.my_assert
-            
+
             live_enemy = self.get_enemy_living_fishes()
             live_enemy.sort()
-            
+
             # 如果上次行动的鱼其实是未知的
             if self.get_enemy_id(enemy_action.action_fish) == -1:
                 # 如果返回目标很多 代表有 aoe
@@ -71,19 +63,19 @@ class AI(AIClient):
 
                 # 判断可能的被动
                 l = zip(enemy_action.friend_passives_id + my_action.enemy_passives_id, enemy_action.friend_types + my_action.enemy_types)
-                with open(f'/workspace/hanyu/dhl/AquaWarAI/AI_SDK/Python/zip.jsonl', 'a+') as f:
+                with open('/workspace/hanyu/dhl/AquaWarAI/AI_SDK/Python/zip.jsonl', 'a+') as f:
                     
                     for _pos, _type in l:
-                        f.write(str(_pos) + " " + str(_type) + '\n')
+                        f.write(f"{str(_pos)} {str(_type)}" + '\n')
                 for _pos, _type in l:
-                        
+
                     if self.passive_type[str(_type)] == 'Counter':
                         self.add_possible(_pos, 0, 0)
                     elif self.passive_type[str(_type)] == 'Deflect':
                         self.add_possible(_pos, 0, 1)
                     else:
                         raise
-            return (-1, -1)
+        return (-1, -1)
             
         
 #策略 选择敌方

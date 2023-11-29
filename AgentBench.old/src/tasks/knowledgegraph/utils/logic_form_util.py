@@ -11,20 +11,20 @@ REVERSE = True  # if REVERSE, then reverse relations are also taken into account
 path = str(Path(__file__).parent.absolute())
 
 reverse_properties = {}
-with open(path + '/../ontology/reverse_properties', 'r') as f:
+with open(f'{path}/../ontology/reverse_properties', 'r') as f:
     for line in f:
         reverse_properties[line.split('\t')[0]] = line.split('\t')[1].replace('\n', '')
 
 
 range_info = {}
-with open(path + '/../ontology/fb_roles', 'r') as f:
+with open(f'{path}/../ontology/fb_roles', 'r') as f:
     for line in f:
         line = line.replace("\n", "")
         fields = line.split(" ")
         range_info[fields[1]] = fields[2]
 
 
-with open(path + '/../ontology/fb_roles', 'r') as f:
+with open(f'{path}/../ontology/fb_roles', 'r') as f:
     content = f.readlines()
     for line in f:
         line = line.replace("\n", "")
@@ -52,7 +52,7 @@ relations.update([
     "user.robert.roman_empire.roman_emperor.prececessor"
 ])
 
-with open(path + '/../ontology/fb_types', 'r') as f:
+with open(f'{path}/../ontology/fb_types', 'r') as f:
     content = f.readlines()
 
 upper_types = defaultdict(lambda: set())
@@ -109,16 +109,13 @@ def same_logical_form(form1: str, form2: str) -> bool:
             tc1 = n1.pop('tc', 'none')
             tc2 = n2.pop('tc', 'none')
 
-            if func1 == func2 and tc1 == tc2:
-                return True
-            else:
-                return False
-            # if 'function' in n1 and 'function' in n2 and n1['function'] == n2['function']:
-            #     return True
-            # elif 'function' not in n1 and 'function' not in n2:
-            #     return True
-            # else:
-            #     return False
+            return func1 == func2 and tc1 == tc2
+                    # if 'function' in n1 and 'function' in n2 and n1['function'] == n2['function']:
+                    #     return True
+                    # elif 'function' not in n1 and 'function' not in n2:
+                    #     return True
+                    # else:
+                    #     return False
         else:
             return False
 
@@ -173,9 +170,7 @@ def _get_graph(
             pass  # return nx.MultiDiGraph()
         G = _get_graph(expression[1])
         size = len(G.nodes())
-        mapping = {}
-        for n in G.nodes():
-            mapping[n] = size - n + 1
+        mapping = {n: size - n + 1 for n in G.nodes()}
         G = nx.relabel_nodes(G, mapping)
         return G
 
@@ -193,16 +188,14 @@ def _get_graph(
             if G2.nodes[qn_id]['id'] in upper_types[G1.nodes[1]['id']]:
                 G2.nodes[qn_id]['id'] = G1.nodes[1]['id']
             # G2.nodes[qn_id]['id'] = G1.nodes[1]['id']
+        mapping = {}
         if G1.nodes[1]['type'] == 'entity':
-            mapping = {}
             for n in G1.nodes():
                 mapping[n] = n + size
-            G1 = nx.relabel_nodes(G1, mapping)
         else:
-            mapping = {}
             for n in G1.nodes():
                 mapping[n] = n + size - 1
-            G1 = nx.relabel_nodes(G1, mapping)
+        G1 = nx.relabel_nodes(G1, mapping)
         G = nx.compose(G1, G2)
 
         if expression[0] != 'JOIN':
@@ -226,25 +219,20 @@ def _get_graph(
             # IIRC, in nx.compose, for the same node, its information can be overwritten by its info in the second graph
             # So here for the AND function we force it to choose the type explicitly provided in the logical form
 
+        mapping = {}
         if G1.nodes[1]['type'] == 'entity':
-            mapping = {}
             for n in G1.nodes():
                 mapping[n] = n + size2
-            G1 = nx.relabel_nodes(G1, mapping)
         else:
-            mapping = {}
             for n in G1.nodes():
                 mapping[n] = n + size2 - 1
-            G1 = nx.relabel_nodes(G1, mapping)
-
+        G1 = nx.relabel_nodes(G1, mapping)
         G2 = nx.relabel_nodes(G2, {size2: size1 + size2 - 1})
         G = nx.compose(G1, G2)
 
         return G
 
     elif expression[0] == 'COUNT':
-        if len(expression) != 2 or not isinstance(expression[1], list):
-            pass  # return nx.MultiDiGraph()
         G = _get_graph(expression[1])
         size = len(G.nodes())
         G.nodes[size]['function'] = 'count'
@@ -267,9 +255,7 @@ def _get_graph(
             # if G2.nodes[size2]['id'] in upper_types[G1.nodes[size1]['id']]:
             G2.nodes[size2]['id'] = G1.nodes[size1]['id']
 
-        mapping = {}
-        for n in G1.nodes():
-            mapping[n] = n + size2 - 1
+        mapping = {n: n + size2 - 1 for n in G1.nodes()}
         G1 = nx.relabel_nodes(G1, mapping)
         G2 = nx.relabel_nodes(G2, {size2: size1 + size2 - 1})
         G = nx.compose(G1, G2)
@@ -286,7 +272,7 @@ def _get_graph(
 
 def graph_to_logical_form(G, start, count: bool = False):
     if count:
-        return '(COUNT ' + none_function(G, start) + ')'
+        return f'(COUNT {none_function(G, start)})'
     else:
         return none_function(G, start)
 
@@ -309,20 +295,29 @@ def binary_nesting(function: str, elements: List[str], types_along_path=None) ->
     if len(elements) < 2:
         print("error: binary function should have 2 parameters!")
     if not types_along_path:
-        if len(elements) == 2:
-            return '(' + function + ' ' + elements[0] + ' ' + elements[1] + ')'
-        else:
-            return '(' + function + ' ' + elements[0] + ' ' + binary_nesting(function, elements[1:]) + ')'
+        return (
+            f'({function} {elements[0]} {elements[1]})'
+            if len(elements) == 2
+            else f'({function} {elements[0]} {binary_nesting(function, elements[1:])})'
+        )
+    if len(elements) == 2:
+        return (
+            f'({function}'
+            + ' '
+            + types_along_path[0]
+            + ' '
+            + elements[0]
+            + ' '
+            + elements[1]
+            + ')'
+        )
     else:
-        if len(elements) == 2:
-            return '(' + function + ' ' + types_along_path[0] + ' ' + elements[0] + ' ' + elements[1] + ')'
-        else:
-            return '(' + function + ' ' + types_along_path[0] + ' ' + elements[0] + ' ' \
-                   + binary_nesting(function, elements[1:], types_along_path[1:]) + ')'
+        return '(' + function + ' ' + types_along_path[0] + ' ' + elements[0] + ' ' \
+               + binary_nesting(function, elements[1:], types_along_path[1:]) + ')'
 
 
 def count_function(G, start):
-    return '(COUNT ' + none_function(G, start) + ')'
+    return f'(COUNT {none_function(G, start)})'
 
 
 def none_function(G, start, arg_node=None, type_constraint=True):  # type_constraint is false for WebQSP
@@ -356,7 +351,7 @@ def none_function(G, start, arg_node=None, type_constraint=True):  # type_constr
         else:
             arg_clause = arg_clause[0]
 
-        return '(' + arg.upper() + ' ' + none_function(G, start) + ' ' + arg_clause + ')'
+        return f'({arg.upper()} {none_function(G, start)} {arg_clause})'
 
     # arg = -1
     # for nei in G[start]:
@@ -387,7 +382,7 @@ def none_function(G, start, arg_node=None, type_constraint=True):  # type_constr
                 G.edges[start, key, i]['visited'] = True
                 set_visited(G, key, start, relation)
                 if G.edges[start, key, i]['reverse']:
-                    relation = '(R ' + relation + ')'
+                    relation = f'(R {relation})'
                 if G.nodes[key]['function'].__contains__('<') or G.nodes[key]['function'].__contains__('>'):
                     if G.nodes[key]['function'] == '>':
                         clauses.append('(gt ' + relation + ' ' + none_function(G, key) + ')')
@@ -400,7 +395,7 @@ def none_function(G, start, arg_node=None, type_constraint=True):  # type_constr
                 else:
                     clauses.append('(JOIN ' + relation + ' ' + none_function(G, key) + ')')
 
-    if len(clauses) == 0:
+    if not clauses:
         return G.nodes[start]['id']
 
     if len(clauses) == 1:
@@ -421,12 +416,12 @@ def get_lisp_from_graph_query(graph_query):
             qid = node['nid']
         if node['function'] != 'none':
             aggregation = node['function']
-            if node['function'].__contains__('arg'):
+            if aggregation.__contains__('arg'):
                 arg_node = node['nid']
     for edge in graph_query['edges']:
         G.add_edge(edge['start'], edge['end'], relation=edge['relation'], reverse=False, visited=False)
         G.add_edge(edge['end'], edge['start'], relation=edge['relation'], reverse=True, visited=False)
-    if 'count' == aggregation:
+    if aggregation == 'count':
         # print(count_function(G, qid))
         return count_function(G, qid)
     else:
@@ -437,12 +432,11 @@ def get_lisp_from_graph_query(graph_query):
 def get_derivations_from_lisp(expression: List):
     if expression[0] == 'AND':
         assert len(expression) == 3
-        if isinstance(expression[1], str):  # class assertion
+        if isinstance(expression[1], str):
             return get_derivations_from_lisp(expression[2])
-        else:
-            rtn = get_derivations_from_lisp(expression[1])
-            rtn.update(get_derivations_from_lisp(expression[2]))
-            return rtn
+        rtn = get_derivations_from_lisp(expression[1])
+        rtn.update(get_derivations_from_lisp(expression[2]))
+        return rtn
     elif expression[0] in ['ARGMIN', 'ARGMAX']:
         return None  # do not need to handle for now
     elif expression[0] == 'COUNT':
@@ -450,23 +444,37 @@ def get_derivations_from_lisp(expression: List):
     elif expression[0] == 'JOIN':
         assert isinstance(expression[1], str)
         if isinstance(expression[2], str):
-            rtn = {expression[2]: [':' + expression[1][:-4] if expression[1][-4:] == '_inv' else '^:' + expression[1]]}
-            return rtn
-        else:
-            previous = get_derivations_from_lisp(expression[2])
-            for k in previous:
-                relation = expression[1]
-                if isinstance(previous[k], list):
-                    previous[k].extend(
-                        [':' + relation[:-4] if relation[-4:] == '_inv' else '^:' + relation])
-                elif isinstance(previous[k], tuple):
-                    previous[k][0].extend([':' + relation[:-4] if relation[-4:] == '_inv' else '^:' + relation])
+            return {
+                expression[2]: [
+                    f':{expression[1][:-4]}'
+                    if expression[1][-4:] == '_inv'
+                    else f'^:{expression[1]}'
+                ]
+            }
+        previous = get_derivations_from_lisp(expression[2])
+        for k in previous:
+            relation = expression[1]
+            if isinstance(previous[k], list):
+                previous[k].extend(
+                    [
+                        f':{relation[:-4]}'
+                        if relation[-4:] == '_inv'
+                        else f'^:{relation}'
+                    ]
+                )
+            elif isinstance(previous[k], tuple):
+                previous[k][0].extend(
+                    [
+                        f':{relation[:-4]}'
+                        if relation[-4:] == '_inv'
+                        else f'^:{relation}'
+                    ]
+                )
 
-            return previous
+        return previous
     elif expression[0] in ['le', 'ge', 'lt', 'gt']:
         assert len(expression) == 3 and isinstance(expression[1], str) and isinstance(expression[2], str)
-        rtn = {expression[2]: (['^:' + expression[1]], expression[0])}
-        return rtn
+        return {expression[2]: ([f'^:{expression[1]}'], expression[0])}
     elif expression[0] == 'TC':
         assert len(expression) == 4
         return get_derivations_from_lisp(expression[1])

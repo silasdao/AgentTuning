@@ -30,8 +30,7 @@ def parse_args():
     group.add_argument("--workers", type=int, default=1, help="Number of workers for evaluation")
     group.add_argument("--max_new_tokens", type=int, default=None, help="Maximum number of new tokens to generate")
     group.add_argument("--no_timestamp", action="store_true", help="Do not use timestamp in output directory")
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def find_all_task_files(all_task_config_path) -> List[str]:

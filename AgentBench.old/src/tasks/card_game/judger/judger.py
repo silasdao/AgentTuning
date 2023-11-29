@@ -217,12 +217,8 @@ class Judger(threading.Thread):
         player_message_dict = {'player': player_id, 'content': data}
         if self.debug_ai:#pragma no cover
             self.std_buffer.write(bytes(json.dumps(player_message_dict), encoding='utf-8'))
-        send_flag = False
         self.mutex_listen.acquire()
-        for listen_id in self.listen_list:
-            if listen_id == player_id:
-                send_flag = True
-                break
+        send_flag = any(listen_id == player_id for listen_id in self.listen_list)
         self.mutex_listen.release()
         if send_flag:
             self.write(convert_byte(json.dumps(player_message_dict)))
@@ -538,10 +534,10 @@ class std_thread(threading.Thread):
                 we recommend that you exit with command(5) rather than violently withdraw")
             print('    example:5')
         elif opt_str == 'state':
-            print('debug_logic = %s'%('True' if(self.debug_logic) else 'False'))
-            print('debug_ai = %s'%('True' if(self.debug_ai) else 'False'))
+            print(f"debug_logic = {'True' if self.debug_logic else 'False'}")
+            print(f"debug_ai = {'True' if self.debug_ai else 'False'}")
             while self.player_thread_list and\
-                self.player_thread_list[len(self.player_thread_list)-1] is None:
+                    self.player_thread_list[len(self.player_thread_list)-1] is None:
                 self.player_thread_list.pop()
             print('index    AI_state')
             for index, player_thread in enumerate(self.player_thread_list):
@@ -604,9 +600,10 @@ class std_thread(threading.Thread):
                     except:
                         print('Your instruction is wrong, please check your input')
                     else:
-                        if len(self.player_thread_list) <= index:
-                            print('cannot find an process numbered %d'%(index))
-                        elif self.player_thread_list[index] is None:
+                        if (
+                            len(self.player_thread_list) <= index
+                            or self.player_thread_list[index] is None
+                        ):
                             print('cannot find an process numbered %d'%(index))
                         else:
                             self.del_ai(index)
@@ -620,9 +617,10 @@ class std_thread(threading.Thread):
                     except:
                         print('Your instruction is wrong, please check your input')
                     else:
-                        if len(self.player_thread_list) <= index:
-                            print('cannot find an process numbered %d'%(index))
-                        elif self.player_thread_list[index] is None:
+                        if (
+                            len(self.player_thread_list) <= index
+                            or self.player_thread_list[index] is None
+                        ):
                             print('cannot find an process numbered %d'%(index))
                         else:
                             self.del_ai(index)
@@ -637,15 +635,16 @@ class std_thread(threading.Thread):
                         print('Your instruction is wrong, please check your input')
                     else:
                         while self.player_thread_list and\
-                            self.player_thread_list[len(self.player_thread_list)-1] is None:
+                                self.player_thread_list[len(self.player_thread_list)-1] is None:
                             self.player_thread_list.pop()
-                        can_flag = True
-                        for player_thread in self.player_thread_list:
-                            if player_thread is None:
-                                can_flag = False
-                                break
+                        can_flag = all(
+                            player_thread is not None
+                            for player_thread in self.player_thread_list
+                        )
                         if can_flag:
-                            print('start game! <command>: %s, <config>: %s, <replay>: %s'%(command, config, replay))
+                            print(
+                                f'start game! <command>: {command}, <config>: {config}, <replay>: {replay}'
+                            )
                             self.start_game(command, config, replay)
                             return True
                         print('when you use this command(4), you need to make sure\
@@ -674,7 +673,7 @@ class std_thread(threading.Thread):
                 break
             print('> ', end="", flush=True)
 
-    def run_buffer(self):# pragma: no cover
+    def run_buffer(self):    # pragma: no cover
         '''
         启动跟控制器的交互模式
         '''
@@ -718,18 +717,13 @@ class std_thread(threading.Thread):
                     config = data_dict['config']
                     replay = data_dict['replay']
                     while self.player_thread_list and\
-                        self.player_thread_list[len(self.player_thread_list)-1] is None:
+                            self.player_thread_list[len(self.player_thread_list)-1] is None:
                         self.player_thread_list.pop()
                     self.logic_start_flag = True
                     if not self.start_game(command, config, replay):
                         break
                 elif data_dict['type'] == 5:
-                    if self.judge_thread is not None:
-                        self.judge_thread.destroy()
-                        self.judge_thread.join()
-                        for player_thread in self.player_thread_list:
-                            player_thread.join()
-                    else:
+                    if self.judge_thread is None:
                         for index, player_thread in enumerate(self.player_thread_list):
                             if player_thread is not None:
                                 try:
@@ -737,13 +731,17 @@ class std_thread(threading.Thread):
                                 except:#pragma no cover
                                     pass
                                 self.player_thread_list[index] = None
+                    else:
+                        self.judge_thread.destroy()
+                        self.judge_thread.join()
+                        for player_thread in self.player_thread_list:
+                            player_thread.join()
                     break
-            else:
-                if self.end_tag:
-                    self.judge_thread.join()
-                    for player_thread in self.player_thread_list:
-                        player_thread.join()
-                    break
+            elif self.end_tag:
+                self.judge_thread.join()
+                for player_thread in self.player_thread_list:
+                    player_thread.join()
+                break
 
 class Time_thread(threading.Thread):
     '''

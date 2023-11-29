@@ -109,31 +109,31 @@ class Session:
         threashold_segments = 3500
         return_messages = []
         # only include the latest {threashold_segments} segments
-        
+
         segments = self._calc_segments(messages[0]["content"])
-        
+
         for message in messages[:0:-1]:
             segments += self._calc_segments(message["content"])
             if segments >= threashold_segments:
                 break
             return_messages.append(message)
-            
-        if len(return_messages) > 0 and return_messages[-1]["role"] == "user":
+
+        if return_messages and return_messages[-1]["role"] == "user":
             return_messages.pop()
-        
+
         instruction = messages[0]["content"]
 
         omit = len(messages) - len(return_messages) - 1
-        
+
         if omit > 0:
             instruction += f"\n\n[NOTICE] {omit} messages are omitted."
             print(f"Warning: {omit} messages are omitted.")
-        
+
         return_messages.append({
             "role": "user",
             "content": instruction
         })
-        
+
         return_messages.reverse()
         return return_messages
         
@@ -143,9 +143,6 @@ class Agent:
     def __init__(self, **configs) -> None:
         self.name = configs.pop("name", None)
         self.src = configs.pop("src", None)
-        # for key in configs:
-        #     print(f"Warning: Unknown argument '{key}' for the agent.")
-        pass
 
     def create_session(self) -> Session:
         return Session(self.inference)

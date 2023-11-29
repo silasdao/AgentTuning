@@ -28,7 +28,7 @@ class InteractionLog:
 
     @property
     def file_name(self):
-        return self.file + "-" + str(self.suffix_index) + ".log"
+        return f"{self.file}-{str(self.suffix_index)}.log"
 
     def __enter__(self):
         self.logfile = open(self.file_name, 'w', encoding="utf-8")
@@ -79,9 +79,7 @@ def worker(log_file, idx, rnge):
 if __name__ == '__main__':
     # env = gym.make('WebAgentTextEnv-v0', observation_mode='text', num_products=DEBUG_PROD_SIZE)
     arg_length = len(sys.argv)
-    if arg_length == 1:
-        ranging = (0, 12087)
-    elif arg_length == 2:
+    if arg_length == 2:
         ranging = (int(sys.argv[1]), int(sys.argv[1]) + 1)
     elif arg_length == 3:
         ranging = (int(sys.argv[1]), int(sys.argv[2]))
@@ -89,5 +87,5 @@ if __name__ == '__main__':
         ranging = (0, 12087)
     model_exec = input(">>> ")
     print("got EXEC", model_exec)
-    log_file = "logs/%s" % (datetime.datetime.now().strftime("%Y-%m-%d=%H-%M-%S"))
+    log_file = f'logs/{datetime.datetime.now().strftime("%Y-%m-%d=%H-%M-%S")}'
     worker(log_file, 0, ranging)

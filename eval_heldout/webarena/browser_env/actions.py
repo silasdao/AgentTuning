@@ -120,58 +120,55 @@ def action2str(
     sementic_element: the semantic information of the element
     such as a line in an accessibility tree
     """
-    if action_set_tag == "id_accessibility_tree":
-        element_id = action["element_id"]
-        match action["action_type"]:
-            case ActionTypes.CLICK:
-                # [ID=X] xxxxx
-                action_str = f"click [{element_id}] where [{element_id}] is {semantic_element}"
-            case ActionTypes.TYPE:
-                text = "".join([_id2key[i] for i in action["text"]])
-                action_str = f"type [{element_id}] [{text}] where [{element_id}] is {semantic_element}"
-            case ActionTypes.HOVER:
-                action_str = f"hover [{element_id}] where [{element_id}] is {semantic_element}"
-            case ActionTypes.SCROLL:
-                action_str = f"scroll [{action['direction']}]"
-            case ActionTypes.KEY_PRESS:
-                action_str = f"press [{action['key_comb']}]"
-            case ActionTypes.GOTO_URL:
-                action_str = f"goto [{action['url']}]"
-            case ActionTypes.NEW_TAB:
-                action_str = "new_tab"
-            case ActionTypes.PAGE_CLOSE:
-                action_str = "close_tab"
-            case ActionTypes.GO_BACK:
-                action_str = "go_back"
-            case ActionTypes.GO_FORWARD:
-                action_str = "go_forward"
-            case ActionTypes.PAGE_FOCUS:
-                action_str = f"page_focus [{action['page_number']}]"
-            case ActionTypes.STOP:
-                action_str = f"stop [{action['answer']}]"
-            case ActionTypes.NONE:
-                action_str = "none"
-            case _:
-                raise ValueError(
-                    f"Unknown action type {action['action_type']}"
-                )
-    else:
+    if action_set_tag != "id_accessibility_tree":
         raise NotImplementedError(f"Unknown action set tag {action_set_tag}")
 
+    element_id = action["element_id"]
+    match action["action_type"]:
+        case ActionTypes.CLICK:
+            # [ID=X] xxxxx
+            action_str = f"click [{element_id}] where [{element_id}] is {semantic_element}"
+        case ActionTypes.TYPE:
+            text = "".join([_id2key[i] for i in action["text"]])
+            action_str = f"type [{element_id}] [{text}] where [{element_id}] is {semantic_element}"
+        case ActionTypes.HOVER:
+            action_str = f"hover [{element_id}] where [{element_id}] is {semantic_element}"
+        case ActionTypes.SCROLL:
+            action_str = f"scroll [{action['direction']}]"
+        case ActionTypes.KEY_PRESS:
+            action_str = f"press [{action['key_comb']}]"
+        case ActionTypes.GOTO_URL:
+            action_str = f"goto [{action['url']}]"
+        case ActionTypes.NEW_TAB:
+            action_str = "new_tab"
+        case ActionTypes.PAGE_CLOSE:
+            action_str = "close_tab"
+        case ActionTypes.GO_BACK:
+            action_str = "go_back"
+        case ActionTypes.GO_FORWARD:
+            action_str = "go_forward"
+        case ActionTypes.PAGE_FOCUS:
+            action_str = f"page_focus [{action['page_number']}]"
+        case ActionTypes.STOP:
+            action_str = f"stop [{action['answer']}]"
+        case ActionTypes.NONE:
+            action_str = "none"
+        case _:
+            raise ValueError(
+                f"Unknown action type {action['action_type']}"
+            )
     return action_str
 
 
 def action2create_function(action: Action) -> str:
-    match (action["action_type"]):
+    match action["action_type"]:
         case ActionTypes.NONE:
             return "create_none_action()"
-        # mouse wheel and keyboard action
         case ActionTypes.SCROLL:
             direction = "up" if "up" in action["direction"] else "down"
             return f"create_scroll_action({repr(direction)})"
         case ActionTypes.KEY_PRESS:
             return f"create_key_press_action({repr(action['key_comb'])})"
-        # inter-page actions
         case ActionTypes.PAGE_FOCUS:
             return f"create_page_focus_action({action['page_number']})"
         case ActionTypes.NEW_TAB:
@@ -185,7 +182,6 @@ def action2create_function(action: Action) -> str:
         case ActionTypes.PAGE_CLOSE:
             return "create_page_close_action()"
 
-        # low-level keyboard and mouse actions
         case ActionTypes.MOUSE_CLICK:
             return f"create_mouse_click_action({action['coords'][0]}, {action['coords'][1]})"
         case ActionTypes.MOUSE_HOVER:
@@ -193,41 +189,36 @@ def action2create_function(action: Action) -> str:
         case ActionTypes.KEYBOARD_TYPE:
             return f"create_keyboard_type_action({list(map(lambda x: _id2key[x], action['text']))})"
 
-        # mid-level keyboard and mouse actions
         case ActionTypes.CLICK:
-            args = []
-            args.append(f"element_id={repr(action['element_id'])}")
-            args.append(
-                f"element_role={repr(_id2role[action['element_role']])}"
-            )
-            args.append(f"element_name={repr(action['element_name'])}")
-            args.append(f"pw_code={repr(action['pw_code'])}")
+            args = [
+                f"element_id={repr(action['element_id'])}",
+                f"element_role={repr(_id2role[action['element_role']])}",
+                f"element_name={repr(action['element_name'])}",
+                f"pw_code={repr(action['pw_code'])}",
+            ]
             args_str = ", ".join(args)
             return f"create_click_action({args_str})"
         case ActionTypes.HOVER:
-            args = []
-            args.append(f"element_id={repr(action['element_id'])}")
-            args.append(
-                f"element_role={repr(_id2role[action['element_role']])}"
-            )
-            args.append(f"element_name={repr(action['element_name'])}")
-            args.append(f"pw_code={repr(action['pw_code'])}")
+            args = [
+                f"element_id={repr(action['element_id'])}",
+                f"element_role={repr(_id2role[action['element_role']])}",
+                f"element_name={repr(action['element_name'])}",
+                f"pw_code={repr(action['pw_code'])}",
+            ]
             args_str = ", ".join(args)
             return f"create_hover_action({args_str})"
         case ActionTypes.TYPE:
-            args = []
             text = "".join(map(lambda x: _id2key[x], action["text"]))
-            args.append(f"text={repr(text)}")
-            args.append(f"element_id={repr(action['element_id'])}")
-            args.append(
-                f"element_role={repr(_id2role[action['element_role']])}"
-            )
-            args.append(f"element_name={repr(action['element_name'])}")
-            args.append(f"pw_code={repr(action['pw_code'])}")
+            args = [
+                f"text={repr(text)}",
+                f"element_id={repr(action['element_id'])}",
+                f"element_role={repr(_id2role[action['element_role']])}",
+                f"element_name={repr(action['element_name'])}",
+                f"pw_code={repr(action['pw_code'])}",
+            ]
             args_str = ", ".join(args)
             return f"create_type_action({args_str})"
 
-        # high-level actions, only support locators from playwright
         case ActionTypes.CHECK:
             return f"create_check_action(pw_code={repr(action['pw_code'])})"
         case ActionTypes.SELECT_OPTION:
@@ -352,7 +343,7 @@ def _keys2ids(keys: list[int | str] | str) -> list[int]:
 
 def get_action_space() -> spaces.Dict:
     """Return the space of serialized actions."""
-    space = spaces.Dict(
+    return spaces.Dict(
         {
             "action_type": spaces.Discrete(len(ActionTypes)),
             # coords (left, top) is used for COORD_CLICK
@@ -385,7 +376,6 @@ def get_action_space() -> spaces.Dict:
             "answer": spaces.Text(MAX_ANSWER_LENGTH),
         }
     )
-    return space
 
 
 def create_random_action() -> Action:
@@ -455,7 +445,7 @@ def create_stop_action(answer: str) -> Action:
 @beartype
 def create_scroll_action(direction: str) -> Action:
     """Return the playwright action"""
-    assert direction in ["up", "down"]
+    assert direction in {"up", "down"}
     action = create_none_action()
     action.update(
         {
@@ -1229,24 +1219,22 @@ def execute_action(
                 page.client = page.context.new_cdp_session(page)
 
         case ActionTypes.SELECT_OPTION:
-            if action["pw_code"]:
-                parsed_code = parse_playwright_code(action["pw_code"])
-                locator_code = parsed_code[:-1]
-                execute_playwright_select_option(locator_code, page)
-            else:
+            if not action["pw_code"]:
                 raise NotImplementedError(
                     "No proper locator found for select option action"
                 )
+            parsed_code = parse_playwright_code(action["pw_code"])
+            locator_code = parsed_code[:-1]
+            execute_playwright_select_option(locator_code, page)
         case ActionTypes.CHECK:
-            if action["pw_code"]:
-                parsed_code = parse_playwright_code(action["pw_code"])
-                locator_code = parsed_code[:-1]
-                execute_playwright_check(locator_code, page)
-            else:
+            if not action["pw_code"]:
                 raise NotImplementedError(
                     "No proper locator found for select option action"
                 )
 
+            parsed_code = parse_playwright_code(action["pw_code"])
+            locator_code = parsed_code[:-1]
+            execute_playwright_check(locator_code, page)
         case _:
             raise ValueError(f"Unknown action type: {action_type}")
 
@@ -1259,130 +1247,6 @@ async def aexecute_action(
 ) -> APage:
     """Execute the async action on the ChromeDriver."""
     raise NotImplementedError("Not implemented yet")
-    action_type = action["action_type"]
-    match action_type:
-        case ActionTypes.NONE:
-            pass
-        case ActionTypes.SCROLL:
-            direction = "up" if "up" in action["direction"] else "down"
-            await aexecute_scroll(direction, page)
-        case ActionTypes.KEY_PRESS:
-            keys = action["key_comb"]
-            await aexecute_key_press(keys, page)
-
-        case ActionTypes.MOUSE_CLICK:
-            await aexecute_mouse_click(
-                action["coords"][0], action["coords"][1], page
-            )
-        case ActionTypes.MOUSE_HOVER:
-            await aexecute_mouse_hover(
-                action["coords"][0], action["coords"][1], page
-            )
-        case ActionTypes.KEYBOARD_TYPE:
-            await aexecute_type(action["text"], page)
-
-        case ActionTypes.CLICK:
-            # check each kind of locator in order
-            # TODO[shuyanzh]: order is temp now
-            if action["element_id"]:
-                raise NotImplementedError
-            elif action["element_role"] and action["element_name"]:
-                element_role = int(action["element_role"])
-                element_name = action["element_name"]
-                nth = action["nth"]
-                await aexecute_focus(element_role, element_name, nth, page)
-                await aexecute_click_current(page)
-            elif action["pw_code"]:
-                parsed_code = parse_playwright_code(action["pw_code"])
-                locator_code = parsed_code[:-1]
-                # [shuyanzh], don't support action args and kwargs now
-                await aexecute_playwright_click(
-                    locator_code=locator_code, page=page
-                )
-            else:
-                raise ValueError("No proper locator found for click action")
-        case ActionTypes.HOVER:
-            if action["element_id"]:
-                raise NotImplementedError
-            elif action["element_role"] and action["element_name"]:
-                element_role = int(action["element_role"])
-                element_name = action["element_name"]
-                nth = action["nth"]
-                await aexecute_focus(element_role, element_name, nth, page)
-            elif action["pw_code"]:
-                parsed_code = parse_playwright_code(action["pw_code"])
-                locator_code = parsed_code[:-1]
-                # [shuyanzh], don't support action args and kwargs now
-                await aexecute_playwright_hover(
-                    locator_code=locator_code, page=page
-                )
-            else:
-                raise NotImplementedError(
-                    "No proper locator found for hover action"
-                )
-        case ActionTypes.TYPE:
-            if action["element_id"]:
-                raise NotImplementedError
-            elif action["element_role"] and action["element_name"]:
-                element_role = int(action["element_role"])
-                element_name = action["element_name"]
-                nth = action["nth"]
-                await aexecute_focus(element_role, element_name, nth, page)
-                await aexecute_type(action["text"], page)
-            elif action["pw_code"]:
-                parsed_code = parse_playwright_code(action["pw_code"])
-                locator_code = parsed_code[:-1]
-                text = parsed_code[-1]["arguments"][0]
-                # [shuyanzh], don't support action args and kwargs now
-                await aexecute_playwright_type(
-                    text=text, locator_code=locator_code, page=page
-                )
-            else:
-                raise NotImplementedError(
-                    "No proper locator found for type action"
-                )
-
-        case ActionTypes.PAGE_FOCUS:
-            page = browser_ctx.pages[action["page_number"]]
-            await page.bring_to_front()
-        case ActionTypes.NEW_TAB:
-            page = await browser_ctx.new_page()
-        case ActionTypes.GO_BACK:
-            await page.go_back()
-        case ActionTypes.GO_FORWARD:
-            await page.go_forward()
-        case ActionTypes.GOTO_URL:
-            await page.goto(action["url"])
-        case ActionTypes.PAGE_CLOSE:
-            await page.close()
-            if len(browser_ctx.pages) > 0:
-                page = browser_ctx.pages[-1]
-            else:
-                page = await browser_ctx.new_page()
-
-        case ActionTypes.SELECT_OPTION:
-            if action["pw_code"]:
-                parsed_code = parse_playwright_code(action["pw_code"])
-                locator_code = parsed_code[:-1]
-                await aexecute_playwright_select_option(locator_code, page)
-            else:
-                raise NotImplementedError(
-                    "No proper locator found for select option action"
-                )
-        case ActionTypes.CHECK:
-            if action["pw_code"]:
-                parsed_code = parse_playwright_code(action["pw_code"])
-                locator_code = parsed_code[:-1]
-                await aexecute_playwright_check(locator_code, page)
-            else:
-                raise NotImplementedError(
-                    "No proper locator found for select option action"
-                )
-
-        case _:
-            raise ValueError(f"Unknown action type: {action_type}")
-
-    return page
 
 
 @beartype
@@ -1465,7 +1329,7 @@ def create_playwright_action(playwright_code: str) -> Action:
             match = re.search(p, playwright_code)
             if not match:
                 raise ActionParsingError(
-                    f"Invalid press action, required to be page.press(KEY_COMB_STR)"
+                    "Invalid press action, required to be page.press(KEY_COMB_STR)"
                 )
             key_comb = match.group(1)
             return create_key_press_action(key_comb=key_comb)
@@ -1481,7 +1345,7 @@ def create_playwright_action(playwright_code: str) -> Action:
             match = re.search(p, playwright_code)
             if not match:
                 raise ActionParsingError(
-                    f"Invalid type/fill action, required to be page.type(TEXT)"
+                    "Invalid type/fill action, required to be page.type(TEXT)"
                 )
             text = match.group(1)
             return create_type_action(text=text, pw_code=playwright_code)
@@ -1494,7 +1358,7 @@ def create_playwright_action(playwright_code: str) -> Action:
             match = re.search(p, playwright_code)
             if not match:
                 raise ActionParsingError(
-                    f"Invalid goto action, required to be page.goto(URL_STR)"
+                    "Invalid goto action, required to be page.goto(URL_STR)"
                 )
             url = match.group(1)
             return create_goto_url_action(url)
@@ -1517,10 +1381,7 @@ def create_playwright_action(playwright_code: str) -> Action:
         case "stop":  # page.stop(answer)
             p = r'stop\(?"(.+)?"\)'
             match = re.search(p, playwright_code)
-            if not match:
-                answer = ""
-            else:
-                answer = match.group(1)
+            answer = "" if not match else match.group(1)
             return create_stop_action(answer)
 
     raise ActionParsingError(f"Unknown playwright action {action}")
@@ -1603,10 +1464,7 @@ def create_id_based_action(action_str: str) -> Action:
             return create_page_close_action()
         case "stop":  # stop answer
             match = re.search(r"stop ?\[(.+)\]", action_str)
-            if not match:  # some tasks don't require an answer
-                answer = ""
-            else:
-                answer = match.group(1)
+            answer = "" if not match else match.group(1)
             return create_stop_action(answer)
 
     raise ActionParsingError(f"Invalid action {action_str}")

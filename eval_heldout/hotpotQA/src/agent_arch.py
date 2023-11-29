@@ -25,26 +25,21 @@ from src.llms import token_enc
 
 def parse_action(string):
     pattern = r'^(\w+)\[(.+)\]$'
-    match = re.match(pattern, string)
-    
-    if match:
+    if match := re.match(pattern, string):
         action_type = match.group(1)
         argument = match.group(2)
-        return action_type, argument
     else:
         action_type, argument = fuzzy_parse_action(string)
-        return action_type, argument
+    return action_type, argument
         
 def fuzzy_parse_action(text):
     text = text.strip(' ').strip('.')
     pattern = r'^(\w+)\[(.+)\]'
-    match = re.match(pattern, text)
-    if match:
-        action_type = match.group(1)
-        argument = match.group(2)
-        return action_type, argument
-    else:
+    if not (match := re.match(pattern, text)):
         return text, ''
+    action_type = match.group(1)
+    argument = match.group(2)
+    return action_type, argument
 
 def format_step(step: str) -> str:
     return step.strip('\n').strip().replace('\n', '')
@@ -168,29 +163,27 @@ class BaseAgent:
 
     def _think(self):
         self.scratchpad += f'\nThought {self.step_n}:'
-        self.scratchpad += ' ' + self.prompt_agent()
+        self.scratchpad += f' {self.prompt_agent()}'
         print(self.scratchpad.split('\n')[-1])
     
     def _action(self):
         self.scratchpad += f'\nAction {self.step_n}:'
         action = self.prompt_agent()
-        self.scratchpad += ' ' + action
+        self.scratchpad += f' {action}'
         action_type, argument = parse_action(action)
         print(self.scratchpad.split('\n')[-1])
         return action_type, argument
         
     def step(self) -> None:
         
-        # agent forward
-        ret = self.forward()
-        if ret:
+        if ret := self.forward():
             action_type, argument = ret[0], ret[1]
         else:
             action_type = ret
-        
+
         # Observe
         self.scratchpad += f'\nObservation {self.step_n}: '
-        
+
         if action_type == 'Finish':
             self.answer = argument
             if self.is_correct():
@@ -206,13 +199,13 @@ class BaseAgent:
                 self.scratchpad += format_step(self.docstore.search(argument))
             except Exception as e:
                 print(e)
-                self.scratchpad += f'Could not find that page, please try again.'
-            
+                self.scratchpad += 'Could not find that page, please try again.'
+
         elif action_type == 'Lookup':
             try:
                 self.scratchpad += format_step(self.docstore.lookup(argument))
             except ValueError:
-                self.scratchpad += f'The last page Searched was not found, so you cannot Lookup a keyword in it. Please try one of the similar pages given.'
+                self.scratchpad += 'The last page Searched was not found, so you cannot Lookup a keyword in it. Please try one of the similar pages given.'
 
         else:
             self.scratchpad += 'Invalid Action. Valid Actions are Lookup[<topic>] Search[<topic>] and Finish[<answer>].'
@@ -327,12 +320,12 @@ class PlannerAgent(BaseAgent):
         return action_type, argument
 
     def _build_agent_prompt(self) -> str:
-        prompt = self.agent_prompt.format(
-            examples = self.examples,
-            question = self.question,
-            plan = self.plan,
-            scratchpad = self.scratchpad)
-        return prompt
+        return self.agent_prompt.format(
+            examples=self.examples,
+            question=self.question,
+            plan=self.plan,
+            scratchpad=self.scratchpad,
+        )
 
 class PlannerReactAgent(PlannerAgent):
     def __init__(self,

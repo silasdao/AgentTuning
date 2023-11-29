@@ -49,12 +49,12 @@ def create_gif(path_prefix):
             (control step 2000; episode 3)
     """
     # Read the event file
-    with open(path_prefix + ".json") as fin:
+    with open(f"{path_prefix}.json") as fin:
         events = json.load(fin)
     # Read the image files
     images = []
     for i, event in enumerate(events):
-        img = Image.open("{}-{}.png".format(path_prefix, i)).convert("RGBA")
+        img = Image.open(f"{path_prefix}-{i}.png").convert("RGBA")
         images.append(img)
         # Highlight the element
         if "element" in event:
@@ -74,7 +74,7 @@ def create_gif(path_prefix):
     durations = [250] * len(images)
     durations[-1] = 1000
     images[0].save(
-        path_prefix + ".gif",
+        f"{path_prefix}.gif",
         append_images=images[1:],
         save_all=True,
         loop=0,
@@ -84,7 +84,7 @@ def create_gif(path_prefix):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: {} PATH_PREFIX".format(sys.argv[0]))
+        print(f"Usage: {sys.argv[0]} PATH_PREFIX")
         print(
             "  where PATH_PREFIX is something like "
             "data/experiments/123_unnamed/traces/test/2000-img/2000-3"

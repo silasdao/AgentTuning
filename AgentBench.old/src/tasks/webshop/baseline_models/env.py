@@ -64,18 +64,14 @@ class WebEnv:
             self.extra_search = None
 
     def get_search_texts(self, atts, query, inst):
-        # TODO: make it more complicated, or replace it with free-form generation
-        if self.extra_search is not None:
-            if ", and price lower than" in inst:
-                idx = inst.find(", and price lower than")
-                inst_ = inst[:idx]
-            else:
-                inst_ = inst
-            texts = self.extra_search.get(inst_, []) + [inst.lower()]
+        if self.extra_search is None:
+            return [query] + [f'{att} {query}' for att in atts] + [inst.lower()]
+        if ", and price lower than" in inst:
+            idx = inst.find(", and price lower than")
+            inst_ = inst[:idx]
         else:
-            texts = [query] + \
-                [f'{att} {query}' for att in atts] + [inst.lower()]
-        return texts
+            inst_ = inst
+        return self.extra_search.get(inst_, []) + [inst.lower()]
 
     def get_valid_actions(self):
         valid_info = self.env.get_available_actions()
@@ -97,7 +93,7 @@ class WebEnv:
                         continue
                 if text != 'search':
                     if self.click_item_name and text in self.asin2name:
-                        text = 'item - ' + self.asin2name[text]
+                        text = f'item - {self.asin2name[text]}'
                     valids.append(f'click[{text}]')
                 # do some action space reduction...
                 if self.reduce_click and len(valids) > 20:
@@ -130,10 +126,7 @@ class WebEnv:
         self.step('click[< prev]')
         feat = self.step('click[features]')[0].lower()
         ob = self.step('click[< prev]')[0].lower()
-        n_att = 0
-        for att in atts:
-            if att in desc or att in feat or att in ob:
-                n_att += 1
+        n_att = sum(1 for att in atts if att in desc or att in feat or att in ob)
         r_att = n_att / len(atts)
         # estimate r_opt
         n_opt = 0
@@ -151,10 +144,7 @@ class WebEnv:
         if self.click_item_name and action.startswith('click[item - ') and action[13:-1] in self.name2asin:
             valid_items = [_ for _ in self.get_valid_actions()
                            if _.startswith('click[item - ')]
-            if action in valid_items:
-                self.item_rank = valid_items.index(action) + 1
-            else:
-                self.item_rank = -1
+            self.item_rank = valid_items.index(action) + 1 if action in valid_items else -1
             action = f'click[{self.name2asin[action[13:-1]]}]'
 
         ob, reward, done, info = self.env.step(action)
@@ -225,11 +215,11 @@ class WebEnv:
             name = self.session['goal']['name'].lower()
             ob, _, _, info = self.step(f'search[{name}]')
             self.stats['action_go_to_search'] += 1
-            if self.go_to_item:
-                asin = self.session['goal']['asin'].lower()
-                if asin in self.env.get_available_actions()['clickables']:
-                    ob, _, _, info = self.step(f'click[{asin}]')
-                    self.stats['action_go_to_item'] += 1
+        if self.go_to_item:
+            asin = self.session['goal']['asin'].lower()
+            if asin in self.env.get_available_actions()['clickables']:
+                ob, _, _, info = self.step(f'click[{asin}]')
+                self.stats['action_go_to_item'] += 1
 
         self.item_rank = -1
         return ob, info

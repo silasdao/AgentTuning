@@ -37,10 +37,7 @@ def annotate(attr_path):
         for i, attr in enumerate(attrs):
             attr, score = attr.split(' | ')
             print(
-                f'{"[" + str(i) + "]":<5} '
-                f'[bold green]{attr:<30}[/bold green] | '
-                f'[red]{category}[/red] | '
-                f'{score}'
+                f'{f"[{str(i)}]":<5} [bold green]{attr:<30}[/bold green] | [red]{category}[/red] | {score}'
             )
             tags = input(
                 'Annotate [1: ITEM, 2: PROP, 3: USE, '
@@ -51,7 +48,7 @@ def annotate(attr_path):
             annotated_attrs.append(f'{attr} | {score} | {tags}')
             if 'q' in tags:
                 break
-        
+
         num_left -= len(attrs)
         print(f'{num_left} / {total} total attributes left.')
 

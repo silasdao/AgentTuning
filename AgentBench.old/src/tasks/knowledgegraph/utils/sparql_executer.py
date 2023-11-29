@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 path = str(Path(__file__).parent.absolute())
 
-with open(path + '/../ontology/fb_roles', 'r') as f:
+with open(f'{path}/../ontology/fb_roles', 'r') as f:
     contents = f.readlines()
 
 roles = set()
@@ -32,9 +32,12 @@ class SparqlExecuter:
         rtn = []
         for result in results['results']['bindings']:
             assert len(result) == 1  # only select one variable
-            for var in result:
-                rtn.append(result[var]['value'].replace('http://rdf.freebase.com/ns/', '').replace("-08:00", ''))
-
+            rtn.extend(
+                result[var]['value']
+                .replace('http://rdf.freebase.com/ns/', '')
+                .replace("-08:00", '')
+                for var in result
+            )
         return rtn
 
 
@@ -58,11 +61,10 @@ class SparqlExecuter:
         except urllib.error.URLError:
             print(query)
             exit(0)
-        rtn = []
-        for result in results['results']['bindings']:
-            rtn.append(result['value']['value'].replace('http://rdf.freebase.com/ns/', ''))
-
-        return rtn
+        return [
+            result['value']['value'].replace('http://rdf.freebase.com/ns/', '')
+            for result in results['results']['bindings']
+        ]
 
 
     def execute_binary(self, relation: str) -> List[Tuple[str, str]]:
@@ -83,11 +85,10 @@ class SparqlExecuter:
         except urllib.error.URLError:
             print(query)
             exit(0)
-        rtn = []
-        for result in results['results']['bindings']:
-            rtn.append((result['x0']['value'], result['x1']['value']))
-
-        return rtn
+        return [
+            (result['x0']['value'], result['x1']['value'])
+            for result in results['results']['bindings']
+        ]
 
 
     def is_intersectant(self, derivation1: tuple, derivation2: str):
@@ -95,12 +96,12 @@ class SparqlExecuter:
             return False
 
         if len(derivation1) == 2:
-            clause1 = derivation1[0] + ' ' + ' / '.join(derivation1[1]) + ' ?x. \n'
+            clause1 = f'{derivation1[0]} ' + ' / '.join(derivation1[1]) + ' ?x. \n'
         elif len(derivation1) == 3:
             clause1 = '?y ' + ' / '.join(derivation1[1]) + ' ?x. \n' + f'FILTER (?y {derivation1[2]} {derivation1[0]}) . \n'
 
         if len(derivation2) == 2:
-            clause2 = derivation2[0] + ' ' + ' / '.join(derivation2[1]) + ' ?x. \n'
+            clause2 = f'{derivation2[0]} ' + ' / '.join(derivation2[1]) + ' ?x. \n'
         elif len(derivation2) == 3:
             clause2 = '?y ' + ' / '.join(derivation2[1]) + ' ?x. \n' + f'FILTER (?y {derivation2[2]} {derivation2[0]}) . \n'
 
@@ -122,8 +123,7 @@ class SparqlExecuter:
         except urllib.error.URLError:
             print(query)
             exit(0)
-        rtn = results['boolean']
-        return rtn
+        return results['boolean']
 
 
     def entity_type_connected(self, entity: str, type: str):
@@ -145,8 +145,7 @@ class SparqlExecuter:
         except urllib.error.URLError:
             print(query)
             exit(0)
-        rtn = results['boolean']
-        return rtn
+        return results['boolean']
 
 
     def entity_type_connected_2hop(self, entity: str, type: str):
@@ -169,13 +168,10 @@ class SparqlExecuter:
         except urllib.error.URLError:
             print(query)
             exit(0)
-        rtn = results['boolean']
-        return rtn
+        return results['boolean']
 
 
     def get_in_attributes(self, value: str):
-        in_attributes = set()
-
         query1 = ("""
                     PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -197,16 +193,14 @@ class SparqlExecuter:
         except urllib.error.URLError:
             print(query1)
             exit(0)
-        for result in results['results']['bindings']:
-            in_attributes.add(result['value']['value'].replace('http://rdf.freebase.com/ns/', ''))
-
-        return in_attributes
+        return {
+            result['value']['value'].replace('http://rdf.freebase.com/ns/', '')
+            for result in results['results']['bindings']
+        }
 
 
 
     def get_in_relations(self, entity: str):
-        in_relations = set()
-
         query1 = ("""
                 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -228,15 +222,13 @@ class SparqlExecuter:
         except urllib.error.URLError:
             print(query1)
             exit(0)
-        for result in results['results']['bindings']:
-            in_relations.add(result['value']['value'].replace('http://rdf.freebase.com/ns/', ''))
-
-        return in_relations
+        return {
+            result['value']['value'].replace('http://rdf.freebase.com/ns/', '')
+            for result in results['results']['bindings']
+        }
 
 
     def get_in_entities(self, entity: str, relation: str):
-        neighbors = set()
-
         query1 = ("""
                 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -258,16 +250,14 @@ class SparqlExecuter:
         except urllib.error.URLError:
             print(query1)
             exit(0)
-        for result in results['results']['bindings']:
-            neighbors.add(result['value']['value'].replace('http://rdf.freebase.com/ns/', ''))
-
-        return neighbors
+        return {
+            result['value']['value'].replace('http://rdf.freebase.com/ns/', '')
+            for result in results['results']['bindings']
+        }
 
 
 
     def get_out_relations(self, entity: str):
-        out_relations = set()
-
         query2 = ("""
             PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -289,15 +279,13 @@ class SparqlExecuter:
         except urllib.error.URLError:
             print(query2)
             exit(0)
-        for result in results['results']['bindings']:
-            out_relations.add(result['value']['value'].replace('http://rdf.freebase.com/ns/', ''))
-
-        return out_relations
+        return {
+            result['value']['value'].replace('http://rdf.freebase.com/ns/', '')
+            for result in results['results']['bindings']
+        }
 
 
     def get_out_entities(self, entity: str, relation: str):
-        neighbors = set()
-
         query2 = ("""
             PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -319,10 +307,10 @@ class SparqlExecuter:
         except urllib.error.URLError:
             print(query2)
             exit(0)
-        for result in results['results']['bindings']:
-            neighbors.add(result['value']['value'].replace('http://rdf.freebase.com/ns/', ''))
-
-        return neighbors
+        return {
+            result['value']['value'].replace('http://rdf.freebase.com/ns/', '')
+            for result in results['results']['bindings']
+        }
 
 
 

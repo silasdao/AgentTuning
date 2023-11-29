@@ -74,7 +74,7 @@ class WikiEnv(gym.Env):
     sentences = []
     for p in paragraphs:
       sentences += p.split('. ')
-    sentences = [s.strip() + '.' for s in sentences if s.strip()]
+    sentences = [f'{s.strip()}.' for s in sentences if s.strip()]
 
     parts = sentences
     parts = [p for p in parts if keyword.lower() in p.lower()]
@@ -90,7 +90,7 @@ class WikiEnv(gym.Env):
     sentences = []
     for p in paragraphs:
       sentences += p.split('. ')
-    sentences = [s.strip() + '.' for s in sentences if s.strip()]
+    sentences = [f'{s.strip()}.' for s in sentences if s.strip()]
     return ' '.join(sentences[:5])
 
     # ps = page.split("\n")
@@ -110,14 +110,14 @@ class WikiEnv(gym.Env):
     self.search_time += time.time() - old_time
     self.num_searches += 1
     soup = BeautifulSoup(response_text, features="html.parser")
-    result_divs = soup.find_all("div", {"class": "mw-search-result-heading"})
-    if result_divs:  # mismatch
+    if result_divs := soup.find_all("div",
+                                    {"class": "mw-search-result-heading"}):
       self.result_titles = [clean_str(div.get_text().strip()) for div in result_divs]
       self.obs = f"Could not find {entity}. Similar: {self.result_titles[:5]}."
     else:
       page = [p.get_text().strip() for p in soup.find_all("p") + soup.find_all("ul")]
       if any("may refer to:" in p for p in page):
-        self.search_step("[" + entity + "]")
+        self.search_step(f"[{entity}]")
       else:
         self.page = ""
         for p in page:
@@ -135,7 +135,7 @@ class WikiEnv(gym.Env):
     if self.answer is not None:  # already finished
       done = True
       return self.obs, reward, done, self._get_info()
-    
+
     if action.startswith("search[") and action.endswith("]"):
       entity = action[len("search["):-1]
       # entity_ = entity.replace(" ", "_")
@@ -150,7 +150,7 @@ class WikiEnv(gym.Env):
       if self.lookup_cnt >= len(self.lookup_list):
         self.obs = "No more results.\n"
       else:
-        self.obs = f"(Result {self.lookup_cnt + 1} / {len(self.lookup_list)}) " + self.lookup_list[self.lookup_cnt]
+        self.obs = f"(Result {self.lookup_cnt + 1} / {len(self.lookup_list)}) {self.lookup_list[self.lookup_cnt]}"
         self.lookup_cnt += 1
     elif action.startswith("finish[") and action.endswith("]"):
       answer = action[len("finish["):-1]
@@ -160,7 +160,7 @@ class WikiEnv(gym.Env):
     elif action.startswith("think[") and action.endswith("]"):
       self.obs = "Nice thought."
     else:
-      self.obs = "Invalid action: {}".format(action)
+      self.obs = f"Invalid action: {action}"
 
     self.steps += 1
 

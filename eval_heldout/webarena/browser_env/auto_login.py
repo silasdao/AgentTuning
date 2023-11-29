@@ -37,12 +37,8 @@ def is_expired(
     context_manager.__exit__()
     if keyword:
         return keyword not in content
-    else:
-        print(url, d_url)
-        if url_exact:
-            return d_url != url
-        else:
-            return url not in d_url
+    print(url, d_url)
+    return d_url != url if url_exact else url not in d_url
 
 
 @beartype

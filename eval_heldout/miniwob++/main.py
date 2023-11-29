@@ -25,9 +25,7 @@ def parse_opt():
     parser.add_argument("--sgrounding", action="store_true", default=False)
     parser.add_argument("--headless", action="store_true", default=True)
 
-    opt = parser.parse_args()
-
-    return opt
+    return parser.parse_args()
 
 
 def web(opt, url):
@@ -65,15 +63,13 @@ def web(opt, url):
 
 
 def get_html_state_from_real(driver, opt):
-    if opt.env == "facebook":
-        main_html_xpath = '//*[@id="content"]'
-        html_body = driver.find_element(By.XPATH, main_html_xpath).get_attribute(
-            "outerHTML"
-        )
-    else:
+    if opt.env != "facebook":
         raise NotImplemented
 
-    return html_body
+    main_html_xpath = '//*[@id="content"]'
+    return driver.find_element(By.XPATH, main_html_xpath).get_attribute(
+        "outerHTML"
+    )
 
 
 def perform_instruction(driver, instruction):
@@ -89,7 +85,7 @@ def perform_instruction(driver, instruction):
         chain.perform()
     elif inst_type == "clickxpath":
         xpath = " ".join(instruction[1:])
-        element = driver.find_element(By.XPATH, str(xpath))
+        element = driver.find_element(By.XPATH, xpath)
         chain = ActionChains(driver)
         chain.move_to_element(element).click().perform()
     elif inst_type == "press":
@@ -149,11 +145,7 @@ def miniwob(opt):
         except:
             continue
 
-        if opt.step == -1:
-            step = llm_agent.get_plan_step()
-        else:
-            step = opt.step
-
+        step = llm_agent.get_plan_step() if opt.step == -1 else opt.step
         logging.info(f"The number of generated action steps: {step}")
 
         for _ in range(step):

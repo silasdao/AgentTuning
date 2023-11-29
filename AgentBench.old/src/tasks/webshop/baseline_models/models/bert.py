@@ -43,11 +43,7 @@ class BertModelForWebshop(PreTrainedModel):
         self.linear_1 = nn.Linear(768 * 4, 768)
         self.relu = nn.ReLU()
         self.linear_2 = nn.Linear(768, 1)
-        if config.image:
-            self.image_linear = nn.Linear(512, 768)
-        else:
-            self.image_linear = None
-
+        self.image_linear = nn.Linear(512, 768) if config.image else None
         # for state value prediction, used in RL
         self.linear_3 = nn.Sequential(
                 nn.Linear(768, 128),
@@ -76,8 +72,8 @@ class BertModelForWebshop(PreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = - sum([logit[label] for logit, label in zip(logits, labels)]) / len(logits)
-        
+            loss = -sum(logit[label] for logit, label in zip(logits, labels)) / len(logits)
+
         return SequenceClassifierOutput(
             loss=loss,
             logits=logits,
@@ -110,9 +106,7 @@ class BertModelForWebshop(PreTrainedModel):
                 values.append(self.linear_3(v[0][0]))
         act_values = torch.cat(act_values, dim=0)
         act_values = torch.cat([F.log_softmax(_, dim=0) for _ in act_values.split(act_sizes)], dim=0)
-        # Optionally, output state value prediction
-        if value:
-            values = torch.cat(values, dim=0)
-            return act_values, act_sizes, values
-        else:
+        if not value:
             return act_values, act_sizes
+        values = torch.cat(values, dim=0)
+        return act_values, act_sizes, values

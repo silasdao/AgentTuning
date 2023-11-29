@@ -70,7 +70,7 @@ def get_data(split):
 
 
 def get_dataset(name, flip=False, variant=None, size=None):
-    fname = name + "-flip" if flip else name
+    fname = f"{name}-flip" if flip else name
     fpath = os.path.join(os.path.dirname(__file__), fname)
     d = {}
     splits = ["train", "validation", "test"]
@@ -80,7 +80,7 @@ def get_dataset(name, flip=False, variant=None, size=None):
         input, output = get_data(split) if name != "nl2bash" else get_data(
             split, variant=variant)
         l = len(input) if size is None else int(len(input) * size)
-        print("{} size: {}".format(split, l))
+        print(f"{split} size: {l}")
         if flip:
             input, output = output, input
         input, output = input[:l], output[:l]

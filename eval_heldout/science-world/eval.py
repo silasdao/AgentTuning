@@ -75,7 +75,7 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613"):
     return num_tokens
 
 def llm_gpt(prompt: List[Dict[str, str]], model: str) -> str:
-    if not 'OPENAI_API_KEY' in os.environ:
+    if 'OPENAI_API_KEY' not in os.environ:
         raise ValueError("OPENAI_API_KEY must be set to eval GPT models.")
 
     for _ in range(3):
@@ -83,10 +83,8 @@ def llm_gpt(prompt: List[Dict[str, str]], model: str) -> str:
             openai_api_key = os.environ['OPENAI_API_KEY']
             openai_api_base = os.environ.get('OPENAI_API_BASE', 'https://api.openai.com/v1')
             response = requests.post(
-                openai_api_base + "/chat/completions",
-                headers={
-                    'Authorization': f'Bearer {openai_api_key}'
-                },
+                f"{openai_api_base}/chat/completions",
+                headers={'Authorization': f'Bearer {openai_api_key}'},
                 json={
                     'model': model,
                     'messages': prompt,
@@ -98,7 +96,6 @@ def llm_gpt(prompt: List[Dict[str, str]], model: str) -> str:
             text = response.json()['choices'][0]['message']['content']
             print(text)
             return text.strip()
-        # if timeout or connection error, retry
         except Timeout: 
             print("Timeout, retrying...")
         except ConnectionError:
@@ -125,7 +122,7 @@ def llm_tgi(prompt: str) -> str:
     }
     for _ in range(3):
         try:
-            url = random.choice(CONTROLLER_ADDR) + "/generate"
+            url = f"{random.choice(CONTROLLER_ADDR)}/generate"
             print(f'Sending request to {url} ...')
             response = requests.post(
                 url,
@@ -135,7 +132,6 @@ def llm_tgi(prompt: str) -> str:
             text = response.json()["generated_text"]
             print(text)
             return text.split('[INST]')[0].split('<|end_of_turn|>')[0].strip()
-        # if timeout or connection error, retry
         except Timeout: 
             print("Timeout, retrying...")
         except ConnectionError:
@@ -162,10 +158,7 @@ def get_file_name(args, task_num):
             except:
                 pass
 
-    # filenameOutPrefix = args["output_path"] + "transformer-" + args["mode"] + "-eval-" + str(args["lm_path"].split('/')[-1]) + "-task" + str(task_num)
-    filenameOutPrefixSeed = args["output_path"] + "task" + str(task_num)
-
-    return filenameOutPrefixSeed
+    return args["output_path"] + "task" + str(task_num)
   
 def process_examples(conv: Conversation, example: List[str]):
     for i, ex in enumerate(example):
@@ -173,13 +166,10 @@ def process_examples(conv: Conversation, example: List[str]):
 
 def get_prompt(conv: Conversation) -> str:
     if conv.name == 'openchat':
-        ret = ''
-        for role, message in conv.messages:
-            if message:
-                ret += role + ": " + message + conv.sep
-            else:
-                ret += role + ":"
-        return ret
+        return ''.join(
+            f"{role}: {message}{conv.sep}" if message else f"{role}:"
+            for role, message in conv.messages
+        )
     else:
         return conv.get_prompt()
 
@@ -198,7 +188,7 @@ def eval(args, task_num, logger):
     # Load init prompt
     with open(args["prompt_file"], 'r') as f:
         d = json.load(f)
-    
+
     # Load encoding tool to count token numbers
     token_model = args["model_name"] if 'gpt' in args["model_name"] else 'gpt-4'
     encoding = tiktoken.encoding_for_model(token_model)
@@ -206,13 +196,15 @@ def eval(args, task_num, logger):
 
     scores = []
 
+    max_len = 4096
+
     for variation in variations:
 
         # train_data = []
         env.load(taskName, variation, args["simplification_str"], generateGoldPath=True)
         task_description = env.taskdescription()[18:]
         recent_actions = ["look around"]
- 
+
         obs, info = env.reset()
 
         done = False
@@ -245,7 +237,7 @@ def eval(args, task_num, logger):
             conv.set_system_message("You are a helpful, respectful and honest assistant.")
         else:
             conv = get_conversation_template(args["model_name"])
-        
+
         conv.append_message(conv.roles[0], INIT_PROMPT)
         conv.append_message(conv.roles[1], 'Ok.')
 
@@ -254,8 +246,6 @@ def eval(args, task_num, logger):
 
         new_task = 'The preceding task has ended. Now, I will start a new task.\n' + clean(obs) + '\n' + task_description
         conv.append_message(conv.roles[0], new_task.strip())
-
-        max_len = 4096
 
         # Kill agent if it provides more than 10 consecutive invalid actions
         fail_counter = 0
@@ -306,34 +296,30 @@ def eval(args, task_num, logger):
 
                 if score < 0:
                     # Our own solution for dealing with such cases
-                    if args["no_stop"]:
-                        done = True
-                        score = last_score
-                    else:
-                        done = True
-                        score = 0
+                    score = last_score if args["no_stop"] else 0
+                    done = True
                 last_score = score
-            
+
             obs = clean(obs)
             print(obs)
 
             # Add action and observation to game prompt
             conv.append_message(conv.roles[0], obs)
-            
+
             recent_actions.append(f'({action}, {obs})')
-            
+
             #logger.info("Input string: " + str(input_str))
             logger.info(f"Variation: {variation}, Step: {step}, Action: {action}")
-            logger.info("Obs: " + obs)
+            logger.info(f"Obs: {obs}")
             logger.info(f"Score: {score}")
             logger.info("")
 
             step += 1
             if (step >= max_steps) or done:
                 break
-  
 
-            logger.info("Recent Actions: " + str(recent_actions))
+
+            logger.info(f"Recent Actions: {recent_actions}")
 
             # Early stopping if we're in a loop
             if len(recent_actions) >= 5 and len(set(recent_actions[-5:])) == 2:
@@ -348,20 +334,18 @@ def eval(args, task_num, logger):
         scores.append(score)
 
         logger.info("Run completed...")
-        logger.info("Scores: " + str(scores))
- 
+        logger.info(f"Scores: {scores}")
+
         time.sleep(2)
 
     # Episodes are finished -- manually save any last histories still in the buffer
     env.saveRunHistoriesBufferIfFull(filenameOutPrefixSeed, maxPerFile=args["max_episode_per_file"], forceSave=True)
 
     avg = sum(scores) / len(scores)
-    logger.info("Average score: " + str(avg))
+    logger.info(f"Average score: {str(avg)}")
 
-    f = open(filenameOutPrefixSeed + "-score.txt", "a")
-    f.write("\n" + "Task name:" + taskName + "Scores: " + str(scores) + " Average score: " + str(avg) + " Args: " + str(args) + "\n")
-    f.close()
-
+    with open(f"{filenameOutPrefixSeed}-score.txt", "a") as f:
+        f.write("\n" + "Task name:" + taskName + "Scores: " + str(scores) + " Average score: " + str(avg) + " Args: " + str(args) + "\n")
     logger.info("Shutting down server...")
     # env.shutdown()
 
@@ -371,7 +355,7 @@ def eval(args, task_num, logger):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--jar_path", type=str, default="") 
+    parser.add_argument("--jar_path", type=str, default="")
     parser.add_argument("--task_nums", default="0")  # use comma to split 
     parser.add_argument("--env_step_limit", type=int, default=100)
     parser.add_argument("--simplification_str", default="easy")
@@ -383,8 +367,7 @@ def parse_args():
     parser.add_argument("--model_name", default="gpt-4")
 
     args = parser.parse_args()
-    params = vars(args)
-    return params
+    return vars(args)
 
 #
 #   Main
@@ -401,8 +384,7 @@ def init_logger(args, task_num, log_level=INFO):
     ch.setLevel(log_level)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
-    logging_dir = args["output_path"]
-    if logging_dir:
+    if logging_dir := args["output_path"]:
         os.makedirs(logging_dir, exist_ok=True)
         filename = f"{filenameOutPrefixSeed}.log"
         fh = logging.FileHandler(filename)

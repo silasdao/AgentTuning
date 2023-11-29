@@ -30,21 +30,20 @@ def predict(obs, info, model, softmax=False, rule=False, bart_model=None):
     if valid_acts[0].startswith('search['):
         if bart_model is None:
             return valid_acts[-1]
-        else:
-            goal = process_goal(obs)
-            query = bart_predict(goal, bart_model, num_return_sequences=5, num_beams=5)
-            # query = random.choice(query)  # in the paper, we sample from the top-5 generated results.
-            query = query[0]  #... but use the top-1 generated search will lead to better results than the paper results.
-            return f'search[{query}]'
-            
+        goal = process_goal(obs)
+        query = bart_predict(goal, bart_model, num_return_sequences=5, num_beams=5)
+        # query = random.choice(query)  # in the paper, we sample from the top-5 generated results.
+        query = query[0]  #... but use the top-1 generated search will lead to better results than the paper results.
+        return f'search[{query}]'
+
     if rule:
-        item_acts = [act for act in valid_acts if act.startswith('click[item - ')]
-        if item_acts:
+        if item_acts := [
+            act for act in valid_acts if act.startswith('click[item - ')
+        ]:
             return item_acts[0]
-        else:
-            assert 'click[buy now]' in valid_acts
-            return 'click[buy now]'
-                
+        assert 'click[buy now]' in valid_acts
+        return 'click[buy now]'
+
     state_encodings = tokenizer(process(obs), max_length=512, truncation=True, padding='max_length')
     action_encodings = tokenizer(list(map(process, valid_acts)), max_length=512, truncation=True,  padding='max_length')
     batch = {
@@ -72,7 +71,7 @@ def episode(model, idx=None, verbose=False, softmax=False, rule=False, bart_mode
     obs, info = env.reset(idx)
     if verbose:
         print(info['goal'])
-    for i in range(100):
+    for _ in range(100):
         action = predict(obs, info, model, softmax=softmax, rule=rule, bart_model=bart_model)
         if verbose:
             print(action)
@@ -92,9 +91,7 @@ def parse_args():
     parser.add_argument("--image", type=bool, default=False, help="Flag to specify whether to use image or not (default: True)")
     parser.add_argument("--softmax", type=bool, default=True, help="Flag to specify whether to use softmax sampling or not (default: True)")
 
-    args = parser.parse_args()
-
-    return args
+    return parser.parse_args()
 
 
 

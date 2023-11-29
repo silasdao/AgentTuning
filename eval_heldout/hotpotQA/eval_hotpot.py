@@ -79,14 +79,14 @@ def main():
     # embed()
     if not os.path.exists(folder_path):
         os.mkdir(folder_path)
-    
+
     levels = ['easy', 'medium', 'hard']
     for level in levels:
         run_one_complex_level(args, level)
 
     def average_reward(name):
         with open(name) as f:
-            data = [i for i in jsonlines.Reader(f)]
+            data = list(jsonlines.Reader(f))
         rewards = [i['reward'] for i in data]
         return sum(rewards) / len(rewards)
 

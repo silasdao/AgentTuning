@@ -120,13 +120,10 @@ trajs = []
 
 def get_prompt(conv: Conversation) -> str:
     if conv.name == 'openchat':
-        ret = ''
-        for role, message in conv.messages:
-            if message:
-                ret += role + ": " + message + conv.sep
-            else:
-                ret += role + ":"
-        return ret
+        return ''.join(
+            f"{role}: {message}{conv.sep}" if message else f"{role}:"
+            for role, message in conv.messages
+        )
     else:
         return conv.get_prompt()
 
@@ -231,8 +228,10 @@ class LLMAgent:
         return
 
     def instruction_history_prompt(self):
-        pt = "\n\n"
-        pt += "We have a history of instructions that have been already executed by the autonomous agent so far.\n"
+        pt = (
+            "\n\n"
+            + "We have a history of instructions that have been already executed by the autonomous agent so far.\n"
+        )
         if not self.past_instruction:
             pt += "No instruction has been executed yet."
         else:
@@ -245,8 +244,10 @@ class LLMAgent:
         return pt
 
     def webpage_state_prompt(self, init_plan: bool = False, with_task=False):
-        pt = "\n\n"
-        pt += "Below is the HTML code of the webpage where the agent should solve a task.\n"
+        pt = (
+            "\n\n"
+            + "Below is the HTML code of the webpage where the agent should solve a task.\n"
+        )
         pt += self.html_state
         pt += "\n\n"
         if self.prompt.example_prompt and (init_plan or self.rci_plan_loop == -1):
@@ -321,7 +322,7 @@ class LLMAgent:
     def get_plan_step(self):
         idx = 1
         while True:
-            if (str(idx) + ".") not in self.current_plan:
+            if f"{str(idx)}." not in self.current_plan:
                 return (idx - 1) + 1
             idx += 1
 
@@ -364,7 +365,7 @@ class LLMAgent:
         pt_orig = pt
         while True:
             try:
-                if self.llm == "chatgpt" or self.llm == "gpt4":
+                if self.llm in ["chatgpt", "gpt4"]:
                     conv = get_conversation_template('gpt-3.5-turbo')
                     conv.set_system_message("You are an autoregressive language model that completes user's sentences. You should not conversate with user.")
                     with open(FEW_SHOT) as f:
@@ -395,7 +396,7 @@ class LLMAgent:
                     elif 'llama' in self.llm:
                         conv = get_conversation_template('llama-2')
                         conv.set_system_message("You are a helpful, respectful and honest assistant.")
-                    elif 'openchat' in self.llm:
+                    else:
                         conv = Conversation(
                             name="openchat",
                             roles=("GPT4 User", "GPT4 Assistant"),
@@ -428,8 +429,8 @@ class LLMAgent:
                         for _ in range(3):
                             try:
                                 response = requests.post(
-                                    random.choice(CONTROLLER_ADDR) + "/generate",
-                                    headers = {'Content-Type': 'application/json'},
+                                    f"{random.choice(CONTROLLER_ADDR)}/generate",
+                                    headers={'Content-Type': 'application/json'},
                                     json=data,
                                     timeout=120,
                                 )
@@ -437,7 +438,6 @@ class LLMAgent:
                                 # print(text)
                                 message = text.split('[INST]')[0].strip()
                                 break
-                            # if timeout or connection error, retry
                             except Timeout: 
                                 print("Timeout, retrying...")
                             except ConnectionError:
@@ -458,8 +458,8 @@ class LLMAgent:
                         for _ in range(3):
                             try:
                                 response = requests.post(
-                                    CONTROLLER_ADDR + "/worker_generate_stream",
-                                    headers = {"User-Agent": "FastChat Client"},
+                                    f"{CONTROLLER_ADDR}/worker_generate_stream",
+                                    headers={"User-Agent": "FastChat Client"},
                                     json=gen_params,
                                     stream=True,
                                     timeout=120,
@@ -470,7 +470,6 @@ class LLMAgent:
                                         text = json.loads(line)["text"]
                                 message = text
                                 break
-                            # if timeout or connection error, retry
                             except Timeout: 
                                 print("Timeout, retrying...")
                             except ConnectionError:
@@ -544,19 +543,16 @@ class LLMAgent:
         else:
             action_prompt = self.prompt.first_action_prompt
 
-        if self.rci_plan_loop == -1:
-            action_prompt = "Based on the task, " + action_prompt
-        else:
-            action_prompt = (
-                "Based on the plan and the history of instructions executed so far, "
-                + action_prompt
-            )
-
+        action_prompt = (
+            f"Based on the task, {action_prompt}"
+            if self.rci_plan_loop == -1
+            else f"Based on the plan and the history of instructions executed so far, {action_prompt}"
+        )
         pt += action_prompt
 
         message = self.get_response(pt)
 
-        pt += self.process_instruction(message) + "`."
+        pt += f"{self.process_instruction(message)}`."
 
         pt, message = self.update_action(pt, message)
 
@@ -577,9 +573,7 @@ class LLMAgent:
         return pt, message
 
     def current_plan_prompt(self, pos=None):
-        pt = "\n\n"
-        pt += "Here is a plan you are following now.\n"
-
+        pt = "\n\n" + "Here is a plan you are following now.\n"
         pt += f'{self.current_plan}'
 
         pt += "\n\n"

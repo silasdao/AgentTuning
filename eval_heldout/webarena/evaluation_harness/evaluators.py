@@ -89,10 +89,7 @@ class StringExactEvaluator(Evaluator):
         last_action = self.get_last_action(trajectory)
         pred = clean_answer(last_action["answer"])
         ref = [clean_answer(x) for x in configs["eval"]["reference_answers"]]
-        if pred in ref:
-            return 1.0
-        else:
-            return 0.0
+        return 1.0 if pred in ref else 0.0
 
 
 @beartype
@@ -182,9 +179,8 @@ class URLExactEvaluator(Evaluator):
             configs = json.load(f)
 
         def clean_url(url: str) -> str:
-            url = str(url)
-            if url.endswith("/"):
-                url = url[:-1]
+            url = url
+            url = url.removesuffix("/")
             return url
 
         pred = clean_url(page.url)
@@ -192,15 +188,9 @@ class URLExactEvaluator(Evaluator):
         ref_urls = [clean_url(url) for url in ref_urls]
         matching_rule = configs["eval"].get("url_note", "EXACT")
         if matching_rule == "EXACT":
-            if pred in ref_urls:
-                return 1.0
-            else:
-                return 0.0
+            return 1.0 if pred in ref_urls else 0.0
         elif matching_rule == "GOLD in PRED":
-            if any([ref in pred for ref in ref_urls]):
-                return 1.0
-            else:
-                return 0.0
+            return 1.0 if any(ref in pred for ref in ref_urls) else 0.0
         else:
             raise ValueError(f"Unknown matching rule: {matching_rule}")
 
@@ -217,7 +207,7 @@ class HTMLContentExactEvaluator(Evaluator):
         client: CDPSession | None = None,
     ) -> float:
         def clean(text: str) -> str:
-            text = str(text)
+            text = text
             return text.strip().lower()
 
         with open(config_file, "r") as f:
@@ -268,12 +258,7 @@ class HTMLContentExactEvaluator(Evaluator):
                 clean(x) for x in required_contents.split(" |OR| ")
             ]
             selected_element = clean(selected_element)
-            score *= any(
-                [
-                    content in selected_element
-                    for content in required_contents_or
-                ]
-            )
+            score *= any(content in selected_element for content in required_contents_or)
 
         return score
 

@@ -71,7 +71,7 @@ class langchain_tgi_llm:
         self.port_max = port_max
 
     def run(self, prompt, temperature=0.9, stop=['\n'], max_tokens=128):
-        ports = [i for i in range(self.port_min, self.port_max + 1)]
+        ports = list(range(self.port_min, self.port_max + 1))
         ip = self.ip
         import random
         url = f"http://{ip}:{random.sample(ports, 1)[0]}/"

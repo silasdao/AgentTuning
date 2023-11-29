@@ -168,10 +168,7 @@ class OSInteraction(Task):
                 return None
             if type(script_obj) is str:
                 return "bash", script_obj
-            if "language" not in script_obj:
-                language = "bash"
-            else:
-                language = script_obj["language"]
+            language = "bash" if "language" not in script_obj else script_obj["language"]
             if "file" in script_obj:
                 with open(os.path.join(script_root_dir, script_obj["file"]), encoding="utf-8") as f:
                     return language, f.read()
@@ -250,12 +247,11 @@ class OSInteraction(Task):
         matches = []
         for item in self.data_config["files"]:
             path = item["problem_file"]
-            for file in glob.glob(path):
-                if file.endswith(".json") or file.endswith(".jsonl"):
-                    matches.append({
-                        "problem_file": file,
-                        "script_dir": item["script_dir"]
-                    })
+            matches.extend(
+                {"problem_file": file, "script_dir": item["script_dir"]}
+                for file in glob.glob(path)
+                if file.endswith(".json") or file.endswith(".jsonl")
+            )
         self.data_config["files"] = matches
         for item in self.data_config["files"]:
             problem_file, problem_dir = item["problem_file"], item["script_dir"]

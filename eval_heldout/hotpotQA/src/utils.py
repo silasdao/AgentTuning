@@ -33,16 +33,16 @@ Trial summary: Correct: {len(correct)}, Incorrect: {len(incorrect)} , Not Finish
     log += '------------- BEGIN CORRECT AGENTS -------------\n\n'
     for agent in correct:
         # log += remove_fewshot(agent._build_agent_prompt()) + f'\nCorrect answer: {agent.key}\n\n'
-        log += agent._build_agent_prompt() + f'\nCorrect answer: {agent.key}\n\n'
+        log += f'{agent._build_agent_prompt()}\nCorrect answer: {agent.key}\n\n'
 
     log += '------------- BEGIN INCORRECT AGENTS -----------\n\n'
     for agent in incorrect:
         # log += remove_fewshot(agent._build_agent_prompt()) + f'\nCorrect answer: {agent.key}\n\n'
-        log += agent._build_agent_prompt() + f'\nCorrect answer: {agent.key}\n\n'
-    
+        log += f'{agent._build_agent_prompt()}\nCorrect answer: {agent.key}\n\n'
+
     log += '------------- BEGIN NOT_FINISH AGENTS -----------\n\n'
     for agent in not_finish:
-        log += agent._build_agent_prompt() + f'\nCorrect answer: {agent.key}\n\n'
+        log += f'{agent._build_agent_prompt()}\nCorrect answer: {agent.key}\n\n'
 
     return log
 
@@ -83,8 +83,7 @@ def get_error_tasks(sessions):
         if sess["error"]:
             task = (sess["question"], sess["answer"])
             error_tasks.append(task)
-    error_tasks = list(set(error_tasks))
-    return error_tasks
+    return list(set(error_tasks))
 
 def get_non_error_tasks(sessions):
     tasks = []
@@ -92,13 +91,12 @@ def get_non_error_tasks(sessions):
         if not sess["error"]:    
             task = (sess["question"], sess["answer"])
             tasks.append(task)
-    tasks = list(set(tasks))
-    return tasks
+    return list(set(tasks))
 
 def delete_error(file_name):
     sessions = get_all_agent_sessions(file_name)
     non_error_sessions = [sess for sess in sessions if not sess["error"]]
-    with open(file_name+'.back', 'a') as b_f:
+    with open(f'{file_name}.back', 'a') as b_f:
         for sess in sessions:
             json.dump(sess, b_f)
             b_f.write('\n')
@@ -130,15 +128,15 @@ Trial summary: Correct: {len(correct)}, Incorrect: {len(incorrect)}, Halted: {le
 
     log += '------------- BEGIN CORRECT AGENTS -------------\n\n'
     for agent in correct:
-        log += remove_fewshot(agent._build_agent_prompt()) + f'\nCorrect answer: {agent.key}\n\n'
+        log += f'{remove_fewshot(agent._build_agent_prompt())}\nCorrect answer: {agent.key}\n\n'
 
     log += '------------- BEGIN INCORRECT AGENTS -----------\n\n'
     for agent in incorrect:
-        log += remove_fewshot(agent._build_agent_prompt()) + f'\nCorrect answer: {agent.key}\n\n'
+        log += f'{remove_fewshot(agent._build_agent_prompt())}\nCorrect answer: {agent.key}\n\n'
 
     log += '------------- BEGIN HALTED AGENTS -----------\n\n'
     for agent in halted:
-        log += remove_fewshot(agent._build_agent_prompt()) + f'\nCorrect answer: {agent.key}\n\n'
+        log += f'{remove_fewshot(agent._build_agent_prompt())}\nCorrect answer: {agent.key}\n\n'
 
     return log
 

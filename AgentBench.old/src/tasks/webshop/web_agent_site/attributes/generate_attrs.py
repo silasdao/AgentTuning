@@ -18,9 +18,8 @@ random.seed(0)
 
 
 def get_stop_words():
-    extra_stop_words = set([str(i) for i in range(1000)])
-    stop_words = sk_text.ENGLISH_STOP_WORDS.union(extra_stop_words)
-    return stop_words
+    extra_stop_words = {str(i) for i in range(1000)}
+    return sk_text.ENGLISH_STOP_WORDS.union(extra_stop_words)
 
 
 def load_products(num=None):
@@ -48,10 +47,7 @@ def load_products(num=None):
         reviews = {r['asin']: r for r in reviews}
 
     for asin, p in products.items():
-        if asin in reviews:
-            p['review'] = reviews[asin]
-        else:
-            p['review'] = None
+        p['review'] = reviews.get(asin, None)
     return products
 
 
@@ -63,14 +59,13 @@ def get_top_attrs(attributes, k):
         for attr, score in top_attr_scoress:
             attr_to_asins[attr].append(asin)
     total = len([asin for asin, _ in attributes.items()])
-    
+
     top_attrs = [
         (attr, len(asins) / total)
         for attr, asins in attr_to_asins.items()
     ]
     top_attrs = sorted(top_attrs, key=lambda x: -x[1])
-    top_attrs = [f'{attr} | {score:.4f}' for attr, score in top_attrs]
-    return top_attrs
+    return [f'{attr} | {score:.4f}' for attr, score in top_attrs]
 
 
 def get_corpus(
@@ -83,7 +78,7 @@ def get_corpus(
     category_type: `category`, `query`
     """
     all_products = list(products.values())
-    
+
     asins_by_cat = defaultdict(set)
     corpus_by_cat = defaultdict(list)
     for p in all_products:
@@ -97,10 +92,7 @@ def get_corpus(
         for key in keys:
             if key == 'review':
                 rs = p['review']['reviews']
-                if r is not None:
-                    text_ = ' '.join([r['review'].lower() for r in rs])
-                else:
-                    text_ = ''
+                text_ = ' '.join([r['review'].lower() for r in rs]) if r is not None else ''
             else:
                 text_ = p[key].lower()
             text.append(text_)

@@ -103,7 +103,7 @@ def process_goal(state):
 
 def get_data(split, mem=False, filter_search=True):
     path = MEM_PATH if mem else PATH
-    print('Loading data from {}'.format(path))
+    print(f'Loading data from {path}')
     with open(path, 'r') as json_file:
         json_list = list(json_file)
 
@@ -161,8 +161,8 @@ def get_data(split, mem=False, filter_search=True):
             action_list.extend(valid_acts)
             idx_list.append(idx)
             size_list.append(len(valid_acts))
-    print('num of {} trajs: {}'.format(split, num_trajs))
-    print('total transitions and bad transitions: {} {}'.format(cnt, bad))
+    print(f'num of {split} trajs: {num_trajs}')
+    print(f'total transitions and bad transitions: {cnt} {bad}')
     state_list, action_list = list(
         map(process, state_list)), list(map(process, action_list))
     return state_list, action_list, idx_list, size_list, image_list
@@ -337,19 +337,17 @@ def parse_args():
 
     args = parser.parse_args()
 
-    # Sanity checks
     if args.task_name is None and args.train_file is None and args.validation_file is None:
         raise ValueError(
             "Need either a task name or a training/validation file.")
-    else:
-        if args.train_file is not None:
-            extension = args.train_file.split(".")[-1]
-            assert extension in [
-                "csv", "json"], "`train_file` should be a csv or a json file."
-        if args.validation_file is not None:
-            extension = args.validation_file.split(".")[-1]
-            assert extension in [
-                "csv", "json"], "`validation_file` should be a csv or a json file."
+    if args.train_file is not None:
+        extension = args.train_file.split(".")[-1]
+        assert extension in [
+            "csv", "json"], "`train_file` should be a csv or a json file."
+    if args.validation_file is not None:
+        extension = args.validation_file.split(".")[-1]
+        assert extension in [
+            "csv", "json"], "`validation_file` should be a csv or a json file."
 
     if args.push_to_hub:
         assert args.output_dir is not None, "Need an `output_dir` to create a repo when `--push_to_hub` is passed."
@@ -415,11 +413,19 @@ def main():
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
         {
-            "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+            "params": [
+                p
+                for n, p in model.named_parameters()
+                if all(nd not in n for nd in no_decay)
+            ],
             "weight_decay": args.weight_decay,
         },
         {
-            "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+            "params": [
+                p
+                for n, p in model.named_parameters()
+                if any(nd in n for nd in no_decay)
+            ],
             "weight_decay": 0.0,
         },
     ]

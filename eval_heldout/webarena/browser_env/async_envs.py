@@ -49,32 +49,6 @@ class AsyncScriptBrowserEnv(Env[npt.NDArray[np.uint8], Action]):
     @beartype
     async def setup(self, config_file: Path | None = None) -> None:
         raise NotImplementedError("Not implemented yet")
-        self.context_manager = async_playwright()
-        self.playwright = await self.context_manager.__aenter__()
-        self.browser = await self.playwright.chromium.launch(
-            headless=self.headless, slow_mo=self.slow_mo
-        )
-        if config_file:
-            with open(config_file, "r") as f:
-                instance_config = json.load(f)
-        else:
-            instance_config = {}
-
-        storage_state = instance_config.get("storage_state", None)
-        start_url = instance_config.get("start_url", None)
-        geolocation = instance_config.get("geolocation", None)
-
-        self.context = await self.browser.new_context(
-            viewport=self.viewport_size,
-            storage_state=storage_state,
-            geolocation=geolocation,
-            device_scale_factor=1,
-        )
-        self.page = await self.context.new_page()
-        self.page.on("request", lambda request: print(">>", request.method, request.url))
-        self.page.on("response", lambda response: print("<<", response.status, response.url))
-        if start_url:
-            await self.page.goto(start_url)
 
     @beartype
     async def areset(

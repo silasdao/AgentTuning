@@ -57,7 +57,7 @@ def predict(receiver):
         observation = env.observation
         reward = 0
         format_fail = False
-        for j in range(10):
+        for _ in range(10):
             available_actions = env.get_available_actions()
             session.inject({"role": "user", "content": f"Observation:\n{observation}\n\n"
                                                        f"Available Actions:\n{available_actions}"})
@@ -91,7 +91,7 @@ class WebShop(Task[int, Dict, None]):
         self.num_envs = min(self.workers, configs.pop("num_envs", 1))
         self.processes = []
         ctx = mp.get_context('spawn')
-        for i in range(self.num_envs):
+        for _ in range(self.num_envs):
             receiver, sender = ctx.Pipe(False)
             p = ctx.Process(target=predict, args=(receiver,))
             p.start()
@@ -123,8 +123,8 @@ class WebShop(Task[int, Dict, None]):
             def f(output, target):
                 output = [x for x in output if x]
                 if key == "history":
-                    return sum([len(x[key]) for x in output]) / len(output) if len(output) > 0 else 0
-                return sum([x[key] for x in output]) / len(output) if len(output) > 0 else 0
+                    return sum(len(x[key]) for x in output) / len(output) if output else 0
+                return sum(x[key] for x in output) / len(output) if output else 0
 
             return f
 

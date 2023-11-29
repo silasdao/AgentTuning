@@ -32,14 +32,17 @@ class Prompter:
 
     @staticmethod
     def claude(messages: List[Dict[str, str]]):
-        prompt = ""
         role_dict = {
             "user": "Human",
             "agent": "Assistant",
         }
-        for item in messages:
-            prompt += f"{role_dict[item['role']]}: {item['content']}\n\n"
-        prompt += "Assistant:"
+        prompt = (
+            "".join(
+                f"{role_dict[item['role']]}: {item['content']}\n\n"
+                for item in messages
+            )
+            + "Assistant:"
+        )
         return {"prompt": prompt}
 
     @staticmethod
@@ -56,14 +59,17 @@ class Prompter:
 
     @staticmethod
     def openchat_v3_2(messages: List[Dict[str, str]]):
-        prompt = ""
         role_dict = {
             "user": "GPT4 User: {content}<|end_of_turn|>",
             "agent": "GPT4 Assistant: {content}<|end_of_turn|>",
         }
-        for item in messages:
-            prompt += role_dict[item['role']].format(content=item['content'])
-        prompt += "GPT4 Assistant:"
+        prompt = (
+            "".join(
+                role_dict[item['role']].format(content=item['content'])
+                for item in messages
+            )
+            + "GPT4 Assistant:"
+        )
         return {"prompt": prompt}
 
 
@@ -72,7 +78,8 @@ class TGIAgent(Agent):
 
     def __init__(self, model_name, max_tokens, ip="0.0.0.0", address_from=23333, address_to=23334, max_new_tokens=32, temperature=1, top_p=0, prompter=None, args=None, **kwargs) -> None:
         self.controller_address = [
-            ip + ":" + str(i) for i in range(address_from, address_to)]
+            f"{ip}:{str(i)}" for i in range(address_from, address_to)
+        ]
         self.model_name = model_name
         self.max_new_tokens = max_new_tokens
         self.max_tokens = max_tokens
@@ -94,31 +101,19 @@ class TGIAgent(Agent):
         }
         if "AgentLM" in self.model_name:
             conv = get_conversation_template("llama-2")
-            for history_item in history:
-                role = history_item["role"]
-                content = history_item["content"].strip()
-                if role == "user":
-                    conv.append_message(conv.roles[0], content)
-                elif role == "agent":
-                    conv.append_message(conv.roles[1], content)
-                else:
-                    raise ValueError(f"Unknown role: {role}")
-            conv.append_message(conv.roles[1], None)
-            prompt = conv.get_prompt()
         else:
             conv = get_conversation_template("vicuna")
-            for history_item in history:
-                role = history_item["role"]
-                content = history_item["content"].strip()
-                if role == "user":
-                    conv.append_message(conv.roles[0], content)
-                elif role == "agent":
-                    conv.append_message(conv.roles[1], content)
-                else:
-                    raise ValueError(f"Unknown role: {role}")
-            conv.append_message(conv.roles[1], None)
-            prompt = conv.get_prompt()
-
+        for history_item in history:
+            role = history_item["role"]
+            content = history_item["content"].strip()
+            if role == "user":
+                conv.append_message(conv.roles[0], content)
+            elif role == "agent":
+                conv.append_message(conv.roles[1], content)
+            else:
+                raise ValueError(f"Unknown role: {role}")
+        conv.append_message(conv.roles[1], None)
+        prompt = conv.get_prompt()
         gen_params.update({
             "prompt": prompt,
             "stop": conv.stop_str,
@@ -140,7 +135,7 @@ class TGIAgent(Agent):
             try:
                 import random
                 response = requests.post(
-                    random.sample(self.controller_address, 1)[0] + "/generate",
+                    f"{random.sample(self.controller_address, 1)[0]}/generate",
                     headers=headers,
                     data=json.dumps(data),
                     timeout=120,
@@ -155,7 +150,6 @@ class TGIAgent(Agent):
                         print(line)
                         text = ""
                 return text
-            # if timeout or connection error, retry
             except Timeout:
                 print("Timeout, retrying...")
             except ConnectionError:

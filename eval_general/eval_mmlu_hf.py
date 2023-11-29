@@ -143,7 +143,7 @@ def eval_subject(
 
     if save_result_dir:
         test_df['model_output'] = result
-        for i, choice in enumerate(choices):
+        for choice in choices:
             test_df[f'prob_{choice}'] = (all_probs[f'prob_{choice}'])
         if score:
             test_df["correctness"] = score
@@ -180,11 +180,12 @@ def cal_mmlu(res):
                 k, acc_sum_dict[k] / cnt_dict[k] * 100))
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     with open(f"mmlu_eval_result_{timestamp}.json", "w") as f:
-        result = {}
-        result["acc"] = acc_sum / cnt * 100
-        result["cnt"] = cnt
-        result["acc_sum_dict"] = acc_sum_dict
-        result["cnt_dict"] = cnt_dict
+        result = {
+            "acc": acc_sum / cnt * 100,
+            "cnt": cnt,
+            "acc_sum_dict": acc_sum_dict,
+            "cnt_dict": cnt_dict,
+        }
         f.write(json.dumps(result))
 
 
@@ -203,8 +204,16 @@ def main(args):
         test_df = pd.read_csv(test_file_path, names=[
                               'question', 'A', 'B', 'C', 'D', 'answer'])
 
-        score = eval_subject(model, tokenizer, subject_name, test_df, dev_df=dev_df, k=5, few_shot=True,
-                             save_result_dir=f"outs/mmlu_eval_result")
+        score = eval_subject(
+            model,
+            tokenizer,
+            subject_name,
+            test_df,
+            dev_df=dev_df,
+            k=5,
+            few_shot=True,
+            save_result_dir="outs/mmlu_eval_result",
+        )
         dev_result[subject_name] = score
     cal_mmlu(dev_result)
 

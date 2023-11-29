@@ -39,8 +39,7 @@ class HumanPolicy(BasePolicy):
         super().__init__()
 
     def forward(self, observation, available_actions):
-        action = input('> ')
-        return action
+        return input('> ')
 
 
 class RandomPolicy(BasePolicy):
@@ -49,8 +48,6 @@ class RandomPolicy(BasePolicy):
 
     def forward(self, observation, available_actions):
         if available_actions['has_search_bar']:
-            action = 'search[shoes]'
-        else:
-            action_arg = random.choice(available_actions['clickables'])
-            action = f'click[{action_arg}]'
-        return action
+            return 'search[shoes]'
+        action_arg = random.choice(available_actions['clickables'])
+        return f'click[{action_arg}]'

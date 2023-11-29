@@ -61,9 +61,7 @@ def parse_results_ebay(query, page_num=None, verbose=True):
 
 
 def parse_item_page_ebay(asin, verbose=True):
-    product_dict = {}
-    product_dict["asin"] = asin
-    
+    product_dict = {"asin": asin}
     url = f"https://www.ebay.com/itm/{asin}"
     if verbose:
         print(f"Item Page URL: {url}")
@@ -88,14 +86,13 @@ def parse_item_page_ebay(asin, verbose=True):
     except:
         product_dict["Price"] = "N/A"
 
-     # Main Image
     try:
         img_div = soup.find('div', {'id': 'mainImgHldr'})
         img_link = img_div.find('img', {'id': 'icImg'})["src"]
         product_dict["MainImage"] = img_link
     except:
         product_dict["MainImage"] = ""
-    
+
     # Rating
     try:
         rating = soup.find('span', {'class': 'reviews-star-rating'})["title"].split()[0]
@@ -110,11 +107,11 @@ def parse_item_page_ebay(asin, verbose=True):
         for block in option_blocks:
             name = block["name"].strip().strip(":")
             option_tags = block.findAll("option")
-            opt_list = []
-            for option_tag in option_tags:
-                if "select" not in option_tag.text.lower():
-                    # Do not include "- select -" (aka `not selected`) choice
-                    opt_list.append(option_tag.text)
+            opt_list = [
+                option_tag.text
+                for option_tag in option_tags
+                if "select" not in option_tag.text.lower()
+            ]
             options[name] = opt_list
     except:
         options = {}
@@ -186,9 +183,7 @@ def parse_results_ws(query, page_num=None, verbose=True):
 
 
 def parse_item_page_ws(asin, query, page_num, options, verbose=True):
-    product_dict = {}
-    product_dict["asin"] = asin
-
+    product_dict = {"asin": asin}
     query_string = '+'.join(query.split())
     options_string = json.dumps(options)
     url = (
@@ -202,7 +197,7 @@ def parse_item_page_ws(asin, query, page_num, options, verbose=True):
 
     # Title, Price, Rating, and MainImage
     product_dict["Title"] = soup.find('h2').text
-    
+
     h4_headers = soup.findAll("h4")
     for header in h4_headers:
         text = header.text
@@ -210,7 +205,7 @@ def parse_item_page_ws(asin, query, page_num, options, verbose=True):
             product_dict["Price"] = text.split(":")[1].strip().strip("$")
         elif "Rating" in text:
             product_dict["Rating"] = text.split(":")[1].strip()
-    
+
     product_dict["MainImage"] = soup.find('img')['src']
 
     # Options
@@ -262,16 +257,15 @@ def parse_item_page_ws(asin, query, page_num, options, verbose=True):
 def parse_results_amz(query, page_num=None, verbose=True):
     url = 'https://www.amazon.com/s?k=' + query.replace(" ", "+")
     if page_num is not None:
-        url += "&page=" + str(page_num)
+        url += f"&page={str(page_num)}"
     if verbose:
         print(f"Search Results URL: {url}")
     webpage = requests.get(url, headers={'User-Agent': HEADER_, 'Accept-Language': 'en-US, en;q=0.5'})
     soup = BeautifulSoup(webpage.content, 'html.parser')
     products = soup.findAll('div', {'data-component-type': 's-search-result'})
     if products is None:
-        temp = open(DEBUG_HTML, "w")
-        temp.write(str(soup))
-        temp.close()
+        with open(DEBUG_HTML, "w") as temp:
+            temp.write(str(soup))
         raise Exception("Couldn't find search results page, outputted html for inspection")
     results = []
 
@@ -294,9 +288,7 @@ def parse_results_amz(query, page_num=None, verbose=True):
 
 # Scrape information of each product
 def parse_item_page_amz(asin, verbose=True):
-    product_dict = {}
-    product_dict["asin"] = asin
-
+    product_dict = {"asin": asin}
     url = f"https://www.amazon.com/dp/{asin}"
     if verbose:
         print("Item Page URL:", url)
@@ -314,7 +306,7 @@ def parse_item_page_amz(asin, verbose=True):
     except AttributeError:
         title = "N/A"
     product_dict["Title"] = title
- 
+
     # Price
     try:
         parent_price_span = soup.find(name="span", class_="apexPriceToPay")
@@ -327,21 +319,18 @@ def parse_item_page_amz(asin, verbose=True):
     # Rating
     try:
         rating = soup.find(name="span", attrs={"id": "acrPopover"})
-        if rating is None:
-            rating = "N/A"
-        else:
-            rating = rating.text
+        rating = "N/A" if rating is None else rating.text
     except AttributeError:
         rating = "N/A"
     product_dict["Rating"] = rating.strip("\n").strip()
- 
+
     # Features
     try:
         features = soup.find(name="div", attrs={"id": "feature-bullets"}).text
     except AttributeError:
         features = "N/A"
     product_dict["BulletPoints"] = features
-    
+
     # Description
     try:
         desc_body = soup.find(name="div", attrs={"id": "productDescription_feature_div"})
@@ -397,32 +386,33 @@ def convert_html_to_text(html, simple=False, clicked_options=None, visited_asins
         return (
             element.parent.name not in ignore and not isinstance(element, Comment)
         )
+
     html_obj = BeautifulSoup(html, 'html.parser')
     texts = html_obj.findAll(text=True)
     visible_texts = filter(tag_visible, texts)
     if simple:
         return ' [SEP] '.join(t.strip() for t in visible_texts if t != '\n')
-    else:
-        observation = ''
-        for t in visible_texts:
-            if t == '\n': continue
-            if t.parent.name == 'button':  # button
-                processed_t = f'[button] {t} [button]'
-            elif t.parent.name == 'label':  # options
-                if f'{t}' in clicked_options:
-                    processed_t = f'  [clicked button] {t} [clicked button]'
-                    observation = f'You have clicked {t}.\n' + observation
-                else:
-                    processed_t = f'  [button] {t} [button]'
-            elif t.parent.get('class') == ["product-link"]: # asins
-                if f'{t}' in visited_asins:
-                    processed_t = f'\n[clicked button] {t} [clicked button]'
-                else:
-                    processed_t = f'\n[button] {t} [button]'
-            else: # regular, unclickable text
-                processed_t =  str(t)
-            observation += processed_t + '\n'
-        return observation
+    observation = ''
+    for t in visible_texts:
+        if t == '\n': continue
+        if t.parent.name == 'button':  # button
+            processed_t = f'[button] {t} [button]'
+        elif t.parent.name == 'label':  # options
+            if f'{t}' in clicked_options:
+                processed_t = f'  [clicked button] {t} [clicked button]'
+                observation = f'You have clicked {t}.\n{observation}'
+            else:
+                processed_t = f'  [button] {t} [button]'
+        elif t.parent.get('class') == ["product-link"]: # asins
+            processed_t = (
+                f'\n[clicked button] {t} [clicked button]'
+                if f'{t}' in visited_asins
+                else f'\n[button] {t} [button]'
+            )
+        else: # regular, unclickable text
+            processed_t =  str(t)
+        observation += processed_t + '\n'
+    return observation
 
 
 # Get action from dict of values retrieved from html
@@ -450,7 +440,7 @@ def convert_dict_to_actions(page_type, products=None, asin=None, page_num=None) 
         if "options" in products[asin]:
             for key, values in products[asin]["options"].items():
                 for value in values:
-                    info["valid"].append("click[" + value + "]")
+                    info["valid"].append(f"click[{value}]")
     if page_type == Page.SUB_PAGE:
         info["valid"] = ['click[back to search]', 'click[< prev]']
     info['image_feat'] = torch.zeros(512)

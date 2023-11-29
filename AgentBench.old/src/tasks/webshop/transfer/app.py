@@ -131,7 +131,7 @@ def predict(obs, info):
     if valid_acts[0].startswith('click['):
         return bert_predict(obs, info)
     else:
-        return "search[" + bart_predict(process_goal(obs)) + "]"
+        return f"search[{bart_predict(process_goal(obs))}]"
 
 def run_episode(goal, env, verbose=True):
     """
@@ -142,7 +142,7 @@ def run_episode(goal, env, verbose=True):
     env = env.lower()
     if env not in ENVIRONMENTS:
         print(f"[ERROR] Environment {env} not recognized")
-        
+
     obs = "Amazon Shopping Game\nInstruction:" + goal + "\n[button] search [button]"
     info = {'valid': ['search[stuff]'], 'image_feat': torch.zeros(512)}
     product_map = {}
@@ -152,14 +152,14 @@ def run_episode(goal, env, verbose=True):
     sub_page_type, page_type, page_num = None, None, None
     search_terms, prod_title, asin = None, None, None
     options = {}
-    
+
     for i in range(100):
         # Run prediction
         action = predict(obs, info)
         if verbose:
             print("====")
             print(action)
-        
+
         # Previous Page Type, Action -> Next Page Type
         action_content = action[action.find("[")+1:action.find("]")]
         prev_page_type = page_type
@@ -180,11 +180,11 @@ def run_episode(goal, env, verbose=True):
                         break
                 if not found:
                     raise Exception("Product to click not found")
-                    
+
             elif any(x.value in action for x in [Page.DESC, Page.FEATURES, Page.REVIEWS]):
                 page_type = Page.SUB_PAGE
                 sub_page_type = Page(action_content.lower())
-                
+
             elif action == 'click[< prev]':
                 if sub_page_type is not None:
                     page_type, sub_page_type = Page.ITEM_PAGE, None
@@ -194,17 +194,17 @@ def run_episode(goal, env, verbose=True):
                 elif prev_page_type == Page.RESULTS and page_num > 1:
                     page_type = Page.RESULTS
                     page_num -= 1
-                    
+
             elif action == 'click[next >]':
                 page_type = Page.RESULTS
                 page_num += 1
-                
+
             elif action.lower() == 'click[back to search]':
                 page_type = Page.SEARCH
-                
+
             elif action == 'click[buy now]':
                 return get_return_value(env, asin, options, search_terms, page_num, product_map[asin])
-            
+
             elif prev_page_type == Page.ITEM_PAGE:
                 found = False
                 for opt_name, opt_values in product_map[asin]["options"].items():
@@ -215,13 +215,13 @@ def run_episode(goal, env, verbose=True):
                         found = True
                         break
                 if not found:
-                    raise Exception("Unrecognized action: " + action)
+                    raise Exception(f"Unrecognized action: {action}")
         else:
-            raise Exception("Unrecognized action:" + action)
-        
+            raise Exception(f"Unrecognized action:{action}")
+
         if verbose:
             print(f"Parsing {page_type.value} page...")
-        
+
         # URL -> Real HTML -> Dict of Info
         if page_type == Page.RESULTS:
             if search_terms in search_results_cache:
@@ -243,7 +243,7 @@ def run_episode(goal, env, verbose=True):
                 search_results_cache[search_terms] = data
                 for d in data:
                     title_to_asin_map[d['Title']] = d['asin']
-        elif page_type == Page.ITEM_PAGE or page_type == Page.SUB_PAGE:
+        elif page_type in [Page.ITEM_PAGE, Page.SUB_PAGE]:
             if asin in product_map:
                 if verbose:
                     print("Loading cached item page for", asin)
@@ -284,7 +284,7 @@ def run_episode(goal, env, verbose=True):
         end = time.time()
         if verbose:
             print("Extracting available actions took", end-begin, "seconds")
-        
+
         if i == 50:
             return get_return_value(env, asin, options, search_terms, page_num, product_map[asin])
 

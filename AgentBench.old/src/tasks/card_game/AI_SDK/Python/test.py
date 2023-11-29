@@ -23,14 +23,10 @@ class AI(AIClient):
         action = Action(game)
         if 0 in self.get_my_living_fishes():
             action.set_action_fish(0)
-            action.set_action_type(1)
-            action.set_enemy_target(0)
         else:
             action.set_action_fish(2)
-            action.set_action_type(1)
-            action.set_enemy_target(0)
-        
-
+        action.set_action_type(1)
+        action.set_enemy_target(0)
         return action
 
 

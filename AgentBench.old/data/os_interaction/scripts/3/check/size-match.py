@@ -16,10 +16,14 @@ def analysis_size(size_str):
         "P": 1024*1024*1024*1024*1024,
         "PB": 1024*1024*1024*1024*1024,        
     }
-    for size_unit in availables:
-        if size_str.endswith(size_unit):
-            return int(size_str[:-len(size_unit)]) * availables[size_unit]
-    return int(size_str)
+    return next(
+        (
+            int(size_str[: -len(size_unit)]) * value
+            for size_unit, value in availables.items()
+            if size_str.endswith(size_unit)
+        ),
+        int(size_str),
+    )
 
 if analysis_size(argv[1]) == analysis_size(argv[2]): 
     exit(0)

@@ -146,7 +146,7 @@ def test_get_option_reward():
     purchased = ["goal 1", "goal 2"]
     r_option, matches = get_option_reward(purchased, goal)
     assert matches == 0
-    assert r_option == None
+    assert r_option is None
 
     # Empty Purchased Options
     goal = ["goal 1", "goal 2"]

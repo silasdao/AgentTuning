@@ -126,12 +126,8 @@ class WebAgentSiteEnv(gym.Env):
             observation (HTML) for parsing.
         """
         if html is None:
-            if url is not None:
-                html = requests.get(url)
-            else:
-                html = self.state['html']
-        html_obj = BeautifulSoup(html, 'html.parser')
-        return html_obj
+            html = requests.get(url) if url is not None else self.state['html']
+        return BeautifulSoup(html, 'html.parser')
 
     def get_reward(self):
         """Get reward value at current step of the environment"""
@@ -143,15 +139,13 @@ class WebAgentSiteEnv(gym.Env):
     def get_instruction_text(self):
         """Get corresponding instruction text for environment current step"""
         html_obj = self._parse_html(self.browser.page_source)
-        instruction_text = html_obj.find(id='instruction-text').h4.text
-        return instruction_text
+        return html_obj.find(id='instruction-text').h4.text
     
     def convert_html_to_text(self, html):
         """Strip HTML of tags and add separators to convert observation into simple mode"""
         texts = self._parse_html(html).findAll(text=True)
         visible_texts = filter(tag_visible, texts)
-        observation = ' [SEP] '.join(t.strip() for t in visible_texts if t != '\n')
-        return observation
+        return ' [SEP] '.join(t.strip() for t in visible_texts if t != '\n')
     
     @property
     def state(self):

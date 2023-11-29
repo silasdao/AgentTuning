@@ -118,19 +118,19 @@ def generate_sample(prompt, ip, post_from, post_to):
         }
         headers = {"Content-Type": "application/json"}
         return requests.post(
-            random.sample(controller_addr_pool, 1)[0] + "/generate",
+            f"{random.sample(controller_addr_pool, 1)[0]}/generate",
             headers=headers,
             data=json.dumps(data),
             timeout=120,
         )
+
     response = request_answer(512)
     answer = clean_answer(response.json()["generated_text"])
     return answer
 
 
 def extract_answer_hf(completion):
-    match = ANS_RE.search(completion)
-    if match:
+    if match := ANS_RE.search(completion):
         match_str = match.group(1).strip()
         match_str = match_str.replace(",", "")
         return eval(match_str)

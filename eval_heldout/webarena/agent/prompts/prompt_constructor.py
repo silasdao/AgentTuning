@@ -51,19 +51,19 @@ class PromptConstructor(object):
             if self.lm_config.mode == "chat":
                 message = [{"role": "system", "content": intro}]
                 for (x, y) in examples:
-                    message.append(
-                        {
-                            "role": "system",
-                            "name": "example_user",
-                            "content": x,
-                        }
-                    )
-                    message.append(
-                        {
-                            "role": "system",
-                            "name": "example_assistant",
-                            "content": y,
-                        }
+                    message.extend(
+                        (
+                            {
+                                "role": "system",
+                                "name": "example_user",
+                                "content": x,
+                            },
+                            {
+                                "role": "system",
+                                "name": "example_assistant",
+                                "content": y,
+                            },
+                        )
                     )
                 message.append({"role": "user", "content": current})
                 return message
@@ -162,8 +162,7 @@ class DirectPromptConstructor(PromptConstructor):
         state_info: StateInfo = trajectory[-1]  # type: ignore[assignment]
 
         obs = state_info["observation"][self.obs_modality]
-        max_obs_length = self.lm_config.gen_config["max_obs_length"]
-        if max_obs_length:
+        if max_obs_length := self.lm_config.gen_config["max_obs_length"]:
             obs = self.tokenizer.decode(self.tokenizer.encode(obs)[:max_obs_length])  # type: ignore[arg-type]
 
         page = state_info["info"]["page"]
@@ -179,16 +178,14 @@ class DirectPromptConstructor(PromptConstructor):
         )
 
         # make sure all keywords are replaced
-        assert all([f"{{k}}" not in current for k in keywords])
-        prompt = self.get_lm_api_input(intro, examples, current)
-        return prompt
+        assert all(f"{{k}}" not in current for _ in keywords)
+        return self.get_lm_api_input(intro, examples, current)
 
     @beartype
     def _extract_action(self, response: str) -> str:
         action_splitter = self.instruction["meta_data"]["action_splitter"]
         pattern = rf"{action_splitter}(.*?){action_splitter}"
-        match = re.search(pattern, response)
-        if match:
+        if match := re.search(pattern, response):
             return match.group(1)
         else:
             raise ActionParsingError(
@@ -222,8 +219,7 @@ class CoTPromptConstructor(PromptConstructor):
         state_info: StateInfo = trajectory[-1]  # type: ignore[assignment]
 
         obs = state_info["observation"][self.obs_modality]
-        max_obs_length = self.lm_config.gen_config["max_obs_length"]
-        if max_obs_length:
+        if max_obs_length := self.lm_config.gen_config["max_obs_length"]:
             obs = self.tokenizer.decode(self.tokenizer.encode(obs)[:max_obs_length])  # type: ignore[arg-type]
 
         page = state_info["info"]["page"]
@@ -236,18 +232,16 @@ class CoTPromptConstructor(PromptConstructor):
             previous_action=previous_action_str,
         )
 
-        assert all([f"{{k}}" not in current for k in keywords])
+        assert all(f"{{k}}" not in current for _ in keywords)
 
-        prompt = self.get_lm_api_input(intro, examples, current)
-        return prompt
+        return self.get_lm_api_input(intro, examples, current)
 
     @beartype
     def _extract_action(self, response: str) -> str:
         # find the first occurence of action
         action_splitter = self.instruction["meta_data"]["action_splitter"]
         pattern = rf"{action_splitter}(.*?){action_splitter}"
-        match = re.search(pattern, response)
-        if match:
+        if match := re.search(pattern, response):
             return match.group(1)
         else:
             raise ActionParsingError(

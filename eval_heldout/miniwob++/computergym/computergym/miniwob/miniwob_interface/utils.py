@@ -36,11 +36,14 @@ def find_sublist(l, sublist):
     Returns
         int
     """
-    for i in range(len(l)):
-        # Check index 0 first for optimization
-        if l[i] == sublist[0] and l[i : i + len(sublist)] == sublist:
-            return i
-    return -1
+    return next(
+        (
+            i
+            for i in range(len(l))
+            if l[i] == sublist[0] and l[i : i + len(sublist)] == sublist
+        ),
+        -1,
+    )
 
 
 class Phrase(object):

@@ -26,9 +26,8 @@ if __name__ == "__main__":
         dec = tokenizer.batch_decode(
             output, skip_special_tokens=True, clean_up_tokenization_spaces=False)
         assert len(dec) % 10 == 0
-        for i in range(len(dec) // 10):
-            all_dec.append(dec[i*10:(i+1)*10])
+        all_dec.extend(dec[i*10:(i+1)*10] for i in range(len(dec) // 10))
     assert len(all_goals) == len(all_dec)
-    d = {goal: dec for goal, dec in zip(all_goals, all_dec)}
+    d = dict(zip(all_goals, all_dec))
     with open('./data/goal_query_predict.json', 'w') as f:
         json.dump(d, f)

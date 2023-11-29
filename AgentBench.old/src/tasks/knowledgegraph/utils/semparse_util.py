@@ -25,10 +25,7 @@ def lisp_to_nested_expression(lisp_string: str) -> List:
 def expression_to_lisp(expression) -> str:
     rtn = '('
     for i, e in enumerate(expression):
-        if isinstance(e, list):
-            rtn += expression_to_lisp(e)
-        else:
-            rtn += e
+        rtn += expression_to_lisp(e) if isinstance(e, list) else e
         if i != len(expression) - 1:
             rtn += ' '
 

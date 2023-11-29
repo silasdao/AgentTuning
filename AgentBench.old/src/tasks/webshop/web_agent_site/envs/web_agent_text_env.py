@@ -128,7 +128,7 @@ class WebAgentTextEnv(gym.Env):
 
         # Collect search bar, buttons, links, and options as clickables
         search_bar = html_obj.find(id='search_input')
-        has_search_bar = True if search_bar is not None else False
+        has_search_bar = search_bar is not None
         buttons = html_obj.find_all(class_='btn')
         product_links  = html_obj.find_all(class_='product-link')
         buying_options = html_obj.select('input[type="radio"]')
@@ -153,15 +153,13 @@ class WebAgentTextEnv(gym.Env):
             image_url = image_url['src']
             if image_url in self.ids:
                 image_idx = self.ids[image_url]
-                image = self.feats[image_idx]
-                return image
+                return self.feats[image_idx]
         return torch.zeros(512)
 
     def get_instruction_text(self):
         """Get corresponding instruction text for current environment session"""
         html_obj = self._parse_html(self.browser.page_source)
-        instruction_text = html_obj.find(id='instruction-text').h4.text
-        return instruction_text
+        return html_obj.find(id='instruction-text').h4.text
 
     def _parse_html(self, html=None):
         """
@@ -173,8 +171,7 @@ class WebAgentTextEnv(gym.Env):
         """
         if html is None:
             html = self.state['html']
-        html_obj = BeautifulSoup(html, 'html.parser')
-        return html_obj
+        return BeautifulSoup(html, 'html.parser')
     
     @property
     def observation(self):
@@ -212,28 +209,28 @@ class WebAgentTextEnv(gym.Env):
         if simple:
             # For `simple` mode, return just [SEP] separators
             return ' [SEP] '.join(t.strip() for t in visible_texts if t != '\n')
-        else:
-            # Otherwise, return an observation with tags mapped to specific, unique separators
-            observation = ''
-            for t in visible_texts:
-                if t == '\n': continue
-                if t.parent.name == 'button':  # button
-                    processed_t = f'[button] {t} [button_]'
-                elif t.parent.name == 'label':  # options
-                    if f'"{t}"' in self.state['url']:
-                        processed_t = f'  [clicked button] {t} [clicked button_]'
-                        observation = f'You have clicked {t}.\n' + observation
-                    else:
-                        processed_t = f'  [button] {t} [button_]'
-                elif t.parent.get('class') == ["product-link"]: # product asins
-                    if f'{t}' in self.server.user_sessions[self.session]['asins']:
-                        processed_t = f'\n[clicked button] {t} [clicked button_]'
-                    else:
-                        processed_t = f'\n[button] {t} [button_]'
-                else: # regular, unclickable text
-                    processed_t =  str(t)
-                observation += processed_t + '\n'
-            return observation
+        # Otherwise, return an observation with tags mapped to specific, unique separators
+        observation = ''
+        for t in visible_texts:
+            if t == '\n': continue
+            if t.parent.name == 'button':  # button
+                processed_t = f'[button] {t} [button_]'
+            elif t.parent.name == 'label':  # options
+                if f'"{t}"' in self.state['url']:
+                    processed_t = f'  [clicked button] {t} [clicked button_]'
+                    observation = f'You have clicked {t}.\n{observation}'
+                else:
+                    processed_t = f'  [button] {t} [button_]'
+            elif t.parent.get('class') == ["product-link"]: # product asins
+                processed_t = (
+                    f'\n[clicked button] {t} [clicked button_]'
+                    if f'{t}' in self.server.user_sessions[self.session]['asins']
+                    else f'\n[button] {t} [button_]'
+                )
+            else: # regular, unclickable text
+                processed_t =  str(t)
+            observation += processed_t + '\n'
+        return observation
     
     def reset(self, session=None, instruction_text=None):
         """Create a new session and reset environment variables"""
@@ -295,7 +292,7 @@ class SimServer:
         # Load all products, goals, and search engine
         self.base_url = base_url
         self.all_products, self.product_item_dict, self.product_prices, _ = \
-            load_products(filepath=file_path, num_products=num_products, human_goals=human_goals)
+                load_products(filepath=file_path, num_products=num_products, human_goals=human_goals)
         self.search_engine = init_search_engine(num_products=num_products)
         self.goals = get_goals(self.all_products, self.product_prices, human_goals)
         self.show_attrs = show_attrs
@@ -310,13 +307,12 @@ class SimServer:
                 goal for (i, goal) in enumerate(self.goals)
                 if filter_goals(i, goal)
             ]
-        
+
         # Imposes `limit` on goals via random selection
         if limit_goals != -1 and limit_goals < len(self.goals):
             self.weights = [goal['weight'] for goal in self.goals]
             self.cum_weights = [0]
-            for w in self.weights:
-                self.cum_weights.append(self.cum_weights[-1] + w)
+            self.cum_weights.extend(self.cum_weights[-1] + w for w in self.weights)
             idxs = []
             while len(idxs) < limit_goals:
                 idx = random_idx(self.cum_weights)
@@ -328,8 +324,7 @@ class SimServer:
         # Set extraneous housekeeping variables
         self.weights = [goal['weight'] for goal in self.goals]
         self.cum_weights = [0]
-        for w in self.weights:
-            self.cum_weights.append(self.cum_weights[-1] + w)
+        self.cum_weights.extend(self.cum_weights[-1] + w for w in self.weights)
         self.user_sessions = dict()
         self.search_time = 0
         self.render_time = 0
@@ -598,10 +593,7 @@ class SimServer:
             'item_sub_page',
             'done'
         ]
-        for page_name in page_names:
-            if page_name in url:
-                return page_name
-        return ''  # index page
+        return next((page_name for page_name in page_names if page_name in url), '')
 
 
 class SimBrowser:

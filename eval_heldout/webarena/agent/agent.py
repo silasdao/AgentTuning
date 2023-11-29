@@ -33,7 +33,7 @@ import urllib3
 
 urllib3.disable_warnings()
 
-CONTROLLER_ADDR = os.environ[f'CONTROLLER_ADDR'].split(',')
+CONTROLLER_ADDR = os.environ['CONTROLLER_ADDR'].split(',')
 
 def llm_llama(prompt: str, config: lm_config.LMConfig) -> str:
     data = {
@@ -49,14 +49,12 @@ def llm_llama(prompt: str, config: lm_config.LMConfig) -> str:
     for _ in range(5):
         try:
             response = requests.post(
-                random.choice(CONTROLLER_ADDR) + "/generate",
+                f"{random.choice(CONTROLLER_ADDR)}/generate",
                 json=data,
                 timeout=120,
                 proxies={'http': '', 'https': ''},
             )
-            text = response.json()["generated_text"]
-            return text
-        # if timeout or connection error, retry
+            return response.json()["generated_text"]
         except Timeout: 
             print("Timeout, retrying...")
         except ConnectionError:
@@ -232,15 +230,14 @@ def construct_llm_config(args: argparse.Namespace) -> lm_config.LMConfig:
     llm_config = lm_config.LMConfig(
         provider=args.provider, model=args.model, mode=args.mode
     )
-    if args.provider in {'openai', 'llama'}:
-        llm_config.gen_config["temperature"] = args.temperature
-        llm_config.gen_config["top_p"] = args.top_p
-        llm_config.gen_config["context_length"] = args.context_length
-        llm_config.gen_config["max_tokens"] = args.max_tokens
-        llm_config.gen_config["stop_token"] = args.stop_token
-        llm_config.gen_config["max_obs_length"] = args.max_obs_length
-    else:
+    if args.provider not in {'openai', 'llama'}:
         raise NotImplementedError(f"provider {args.provider} not implemented")
+    llm_config.gen_config["temperature"] = args.temperature
+    llm_config.gen_config["top_p"] = args.top_p
+    llm_config.gen_config["context_length"] = args.context_length
+    llm_config.gen_config["max_tokens"] = args.max_tokens
+    llm_config.gen_config["stop_token"] = args.stop_token
+    llm_config.gen_config["max_obs_length"] = args.max_obs_length
     return llm_config
 
 

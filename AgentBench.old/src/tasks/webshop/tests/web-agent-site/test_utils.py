@@ -9,8 +9,7 @@ def test_random_idx():
     random.seed(24)
     weights = [random.randint(0, 10) for _ in range(0, 50)]
     cml_weights = [0]
-    for w in weights:
-        cml_weights.append(cml_weights[-1] + w)
+    cml_weights.extend(cml_weights[-1] + w for w in weights)
     idx_1, expected_1 = random_idx(cml_weights), 44
     idx_2, expected_2 = random_idx(cml_weights), 15
     idx_3, expected_3 = random_idx(cml_weights), 36
@@ -25,7 +24,7 @@ def test_setup_logger():
     session_id = "ABC"
 
     logger = setup_logger(session_id, user_log_dir)
-    log_file = Path(LOG_DIR + "/" + session_id + ".jsonl")
+    log_file = Path(f"{LOG_DIR}/{session_id}.jsonl")
     assert Path(log_file).is_file()
     assert logger.level == logging.INFO
 

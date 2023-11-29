@@ -51,7 +51,7 @@ class CardGame(Task):
         try:
             shutil.rmtree(directory)
         except Exception as e:
-            print('Failed to delete %s. Reason: %s' % (directory, e))
+            print(f'Failed to delete {directory}. Reason: {e}')
     
     # run for one round
     def get_data(self) -> Dataset[Dict, Dict]:
@@ -59,7 +59,7 @@ class CardGame(Task):
         for stage in [2]:
             for base in ["baseline1", "baseline2"]:
                 for agent in [0, 1]:
-                    for i in range(self.test_time):
+                    for _ in range(self.test_time):
                         ret.append(DataPiece({
                         "stage" : stage,
                         "base" : base,  
@@ -75,8 +75,6 @@ class CardGame(Task):
         }
         # a round consist of 50 subrounds
         folder = self._random_string(16)
-        total = {}
-        
         stage = data_item["stage"]
         base = data_item["base"]
         agent = data_item["agent"]
@@ -89,34 +87,25 @@ class CardGame(Task):
         os.makedirs(save_dir)
 
         cmd = f'python {self.root_dir}/judger/judger.py {self.root_dir}/logic/bin/main %s %s config {save_dir}/replay.json'
-        
+
         if agent == 0:
             cmd = cmd % (location["ai"] % (stage, 0, save_dir, self.port), location[base] % (stage, 1, save_dir))
         else:
             cmd = cmd % (location[base] % (stage, 1, save_dir), location["ai"] % (stage, 0, save_dir, self.port))
-        
+
         th = threading.Thread(target=self.server.start, args=(folder, session,))
         th.start()
         msg = run_cmd(cmd)[1]
         time.sleep(1)
         th.join()
         current_log = self.server.log[folder]
-        
-        if agent == 0:
-            meta = {'ai1': "ai", 'ai2': base}
-        else:
-            meta = {'ai1': base, 'ai2': "ai"}
-                
-        if "\"0\" : 0" in msg:
-            meta['winner'] = '1'
-        else:
-            meta['winner'] = '0'
-        
-        with open(save_dir + '/meta.json', 'w') as f:
-            f.write(json.dumps(meta))     
-        ret = calculate(result_dir=result_dir, agent=agent) 
-        total[result_dir] = ret
-        
+
+        meta = {'ai1': "ai", 'ai2': base} if agent == 0 else {'ai1': base, 'ai2': "ai"}
+        meta['winner'] = '1' if "\"0\" : 0" in msg else '0'
+        with open(f'{save_dir}/meta.json', 'w') as f:
+            f.write(json.dumps(meta))
+        ret = calculate(result_dir=result_dir, agent=agent)
+        total = {result_dir: ret}
         self._delete_dir(result_dir)
 
         return {"meta": total, "game": current_log, "state": meta, "folder": folder}

@@ -44,10 +44,10 @@ class Agent:
         elif args.network == 'bert':
             config = BertConfigForWebshop(image=args.get_image, pretrained_bert=(args.bert_path != 'scratch'))
             self.network = BertModelForWebshop(config)
-            if args.bert_path != '' and args.bert_path != 'scratch':
+            if args.bert_path not in ['', 'scratch']:
                 self.network.load_state_dict(torch.load(args.bert_path, map_location=torch.device('cpu')), strict=False)
         else:
-            raise ValueError('Unknown network: {}'.format(args.network))
+            raise ValueError(f'Unknown network: {args.network}')
         self.network = self.network.to(device)
 
         self.save_path = args.output_dir
@@ -72,8 +72,9 @@ class Agent:
         """ Encode an observation """
         observation = observation.lower().replace('"', '').replace("'", "").strip()
         observation = observation.replace('[sep]', '[SEP]')
-        token_ids = self.tokenizer.encode(observation, truncation=True, max_length=max_length)
-        return token_ids
+        return self.tokenizer.encode(
+            observation, truncation=True, max_length=max_length
+        )
 
     def decode(self, act):
         act = self.tokenizer.decode(act, skip_special_tokens=True)
@@ -109,10 +110,7 @@ class Agent:
             if 102 in act:
                 act = act[:act.index(102) + 1]
             act_ids.append(act)  # [101, ..., 102]
-            if idx is None:  # generative
-                act_str = self.decode(act)
-            else:  # int
-                act_str = valids[idx]
+            act_str = self.decode(act) if idx is None else valids[idx]
             act_strs.append(act_str)
         return act_strs, act_ids, values
     
@@ -121,13 +119,12 @@ class Agent:
         returns, advs = discount_reward(transitions, last_values, self.gamma)
         stats_global = defaultdict(float)
         for transition, adv in zip(transitions, advs):
-            stats = {}
             log_valid, valid_sizes = self.network.rl_forward(transition.state, transition.valid_acts)
             act_values = log_valid.split(valid_sizes)
             log_a = torch.stack([values[acts.index(act)]
                                         for values, acts, act in zip(act_values, transition.valid_acts, transition.act)])
 
-            stats['loss_pg'] = - (log_a * adv.detach()).mean()
+            stats = {'loss_pg': -(log_a * adv.detach()).mean()}
             stats['loss_td'] = adv.pow(2).mean()
             stats['loss_il'] = - log_valid.mean()
             stats['loss_en'] = (log_valid * log_valid.exp()).mean()

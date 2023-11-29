@@ -11,9 +11,9 @@ class RCDQN(nn.Module):
         self.word_dim = embedding_dim
         self.word_emb = nn.Embedding(vocab_size, embedding_dim)
         if embs is not None:
-            print('Loading embeddings of shape {}'.format(embs.shape))
+            print(f'Loading embeddings of shape {embs.shape}')
             self.word_emb.weight.data.copy_(torch.from_numpy(embs))
-            # self.word_emb.weight.requires_grad = False
+                # self.word_emb.weight.requires_grad = False
         self.hidden_dim = hidden_dim
         self.keep_prob = 1.0
         self.rnn = EncoderRNN(self.word_dim, self.hidden_dim, 1,
@@ -75,14 +75,14 @@ class RCDQN(nn.Module):
         state_output = self.linear_1(state_output)
         if self.get_image:
             images = [state.image_feat for state in state_batch]
-            images = [torch.zeros(512) if _ is None else _ for _ in images] 
-            images = torch.stack([_ for _ in images]).cuda()  # BS x 512
+            images = [torch.zeros(512) if _ is None else _ for _ in images]
+            images = torch.stack(list(images)).cuda()
             images = self.linear_image(images)
             state_output = torch.cat([images.unsqueeze(1), state_output], dim=1)
             obs_lens = [_ + 1 for _ in obs_lens]
             obs_mask = torch.cat([obs_mask[:, :1], obs_mask], dim=1)
         state_output = self.rnn_2(state_output, obs_lens)
-        
+
         # state value
         if value:
             values = get_aggregated(state_output, obs_lens, 'mean')
@@ -112,10 +112,7 @@ class RCDQN(nn.Module):
             act_values = torch.cat([F.log_softmax(_, dim=0) for _ in act_values.split(act_sizes)], dim=0)
 
         # Optionally, output state value prediction
-        if value:
-            return act_values, act_sizes, values
-        else:
-            return act_values, act_sizes
+        return (act_values, act_sizes, values) if value else (act_values, act_sizes)
 
 
 

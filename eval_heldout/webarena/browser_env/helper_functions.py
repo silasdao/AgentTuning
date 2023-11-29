@@ -75,13 +75,13 @@ def get_action_description(
 
     match action_set_tag:
         case "id_accessibility_tree":
-            text_meta_data = observation_metadata["text"]
             if action["action_type"] in [
                 ActionTypes.CLICK,
                 ActionTypes.HOVER,
                 ActionTypes.TYPE,
             ]:
                 action_name = str(action["action_type"]).split(".")[1].lower()
+                text_meta_data = observation_metadata["text"]
                 if action["element_id"] in text_meta_data["obs_nodes_info"]:
                     node_content = text_meta_data["obs_nodes_info"][
                         action["element_id"]
@@ -92,17 +92,16 @@ def get_action_description(
                     )
                 else:
                     action_str = f"Attempt to perfom \"{action_name}\" on element \"[{action['element_id']}]\" but no matching element found. Please check the observation more carefully."
+            elif (
+                action["action_type"] == ActionTypes.NONE
+                and prompt_constructor is not None
+            ):
+                action_splitter = prompt_constructor.instruction["meta_data"][
+                    "action_splitter"
+                ]
+                action_str = f'The previous prediction you issued was "{action["raw_prediction"]}". However, the format was incorrect. Ensure that the action is wrapped inside a pair of {action_splitter} and enclose arguments within [] as follows: {action_splitter}action [arg] ...{action_splitter}.'
             else:
-                if (
-                    action["action_type"] == ActionTypes.NONE
-                    and prompt_constructor is not None
-                ):
-                    action_splitter = prompt_constructor.instruction[
-                        "meta_data"
-                    ]["action_splitter"]
-                    action_str = f'The previous prediction you issued was "{action["raw_prediction"]}". However, the format was incorrect. Ensure that the action is wrapped inside a pair of {action_splitter} and enclose arguments within [] as follows: {action_splitter}action [arg] ...{action_splitter}.'
-                else:
-                    action_str = action2str(action, action_set_tag, "")
+                action_str = action2str(action, action_set_tag, "")
 
         case "playwright":
             action_str = action["pw_code"]
@@ -121,9 +120,7 @@ class RenderHelper(object):
     ) -> None:
         with open(config_file, "r") as f:
             _config = json.load(f)
-            _config_str = ""
-            for k, v in _config.items():
-                _config_str += f"{k}: {v}\n"
+            _config_str = "".join(f"{k}: {v}\n" for k, v in _config.items())
             _config_str = f"<pre>{_config_str}</pre>\n"
             task_id = _config["task_id"]
 

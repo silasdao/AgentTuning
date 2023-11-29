@@ -58,8 +58,7 @@ def shopping_get_latest_order_url() -> str:
     assert response.status_code == 200
     response_obj = response.json()["items"][0]
     order_id = int(response_obj["increment_id"])
-    order_url = f"{SHOPPING}/sales/order/view/order_id/{order_id}/"
-    return order_url
+    return f"{SHOPPING}/sales/order/view/order_id/{order_id}/"
 
 
 @beartype
@@ -74,10 +73,7 @@ def shopping_get_sku_latest_review_author(sku: str) -> str:
     )
     assert response.status_code == 200
     response_obj = response.json()
-    if len(response_obj) == 0:
-        return ""
-    author: str = response_obj[-1]["nickname"]
-    return author
+    return "" if len(response_obj) == 0 else response_obj[-1]["nickname"]
 
 
 @beartype
@@ -114,8 +110,7 @@ def reddit_get_post_url(url: str) -> str:
     subreddit = urlparse(url).path.split("/")[2]
     post_id = urlparse(url).path.split("/")[3]
     scheme = urlparse(url).scheme
-    post_url = f"{scheme}://{domain}/f/{subreddit}/{post_id}/"
-    return post_url
+    return f"{scheme}://{domain}/f/{subreddit}/{post_id}/"
 
 
 @beartype
@@ -153,18 +148,13 @@ def gitlab_get_project_memeber_role(page: Page, account_name: str) -> str:
 @beartype
 def llm_fuzzy_match(pred: str, reference: str, question: str) -> float:
     """Check whether the prediction matches the reference with GPT-3.5"""
-    messages: list[dict[str, Any]] = []
-    messages.append(
-        {"role": "system", "content": "You are a helpful assistant"}
-    )
-
-    messages.append(
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": "You are a helpful assistant"},
         {
             "role": "user",
             "content": f'Given the statement "{pred}", would it be correct to infer "{reference}"? Yes or No',
-        }
-    )
-
+        },
+    ]
     response = generate_from_openai_chat_completion(
         messages=messages,
         model="gpt-3.5-turbo",
@@ -174,7 +164,4 @@ def llm_fuzzy_match(pred: str, reference: str, question: str) -> float:
         max_tokens=16,
         stop_token=None,
     )
-    if "Yes" in response:
-        return 1.0
-    else:
-        return 0.0
+    return 1.0 if "Yes" in response else 0.0

@@ -12,7 +12,7 @@ for llm in Path(HISTORY).iterdir():
         task = next(next(task.iterdir()).iterdir())
         episode_count = 0
         for episode in task.iterdir():
-            if not episode.suffix == '.txt':
+            if episode.suffix != '.txt':
                 continue
             is_correct = 'success' in episode.name
             is_fail = 'fail'

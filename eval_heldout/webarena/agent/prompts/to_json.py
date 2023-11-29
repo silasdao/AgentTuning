@@ -10,7 +10,7 @@ def run() -> None:
 
     Python files are easiser to edit
     """
-    for p_file in glob.glob(f"agent/prompts/raw/*.py"):
+    for p_file in glob.glob("agent/prompts/raw/*.py"):
         # import the file as a module
         base_name = os.path.basename(p_file).replace(".py", "")
         module = importlib.import_module(f"agent.prompts.raw.{base_name}")
@@ -19,7 +19,7 @@ def run() -> None:
         os.makedirs("agent/prompts/jsons", exist_ok=True)
         with open(f"agent/prompts/jsons/{base_name}.json", "w+") as f:
             json.dump(prompt, f, indent=2)
-    print(f"Done convert python files to json")
+    print("Done convert python files to json")
 
 
 if __name__ == "__main__":

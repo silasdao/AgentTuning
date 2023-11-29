@@ -57,7 +57,7 @@ class Fields(object):
         return self._d.values()
 
     def __repr__(self):
-        return "\n".join("{}: {}".format(k, repr(v)) for k, v in self._d.items())
+        return "\n".join(f"{k}: {repr(v)}" for k, v in self._d.items())
 
     __str__ = __repr__
 
@@ -151,11 +151,8 @@ _add("click-button-sequence", r"Click button ONE, then click button TWO\.", [])
 # Select resemble,padres,brooklyn,miller and click Submit.
 def extract_click_checkboxes(utterance):
     targets = re.match(r"Select (.*) and click Submit\.", utterance).group(1)
-    if targets == "nothing":
-        targets = []
-    else:
-        targets = re.split(", ?", targets)
-    fields = dict(zip(["target {}".format(i) for i in range(len(targets))], targets))
+    targets = [] if targets == "nothing" else re.split(", ?", targets)
+    fields = dict(zip([f"target {i}" for i in range(len(targets))], targets))
     fields["button"] = "submit"
     return Fields(fields)
 
@@ -181,7 +178,7 @@ def extract_click_checkboxes_soft(utterance):
         r"Select words similar to (.*) and click Submit\.", utterance
     ).group(1)
     targets = re.split(", ?", targets)
-    fields = dict(zip(["target {}".format(i) for i in range(len(targets))], targets))
+    fields = dict(zip([f"target {i}" for i in range(len(targets))], targets))
     fields["button"] = "submit"
     return Fields(fields)
 
@@ -578,14 +575,13 @@ EMAIL_INBOX_PATTERNS = [
 
 def extract_email_inbox(utterance):
     for task, regex, keys in EMAIL_INBOX_PATTERNS:
-        match = re.match(regex, utterance)
-        if match:
+        if match := re.match(regex, utterance):
             return Fields(dict(zip(keys, match.groups())))
-    raise ValueError("Bad email-inbox utterance: {}".format(utterance))
+    raise ValueError(f"Bad email-inbox utterance: {utterance}")
 
 
 for task, regex, keys in EMAIL_INBOX_PATTERNS:
-    _add("email-inbox-" + task, regex, keys)
+    _add(f"email-inbox-{task}", regex, keys)
 FIELD_EXTRACTORS["email-inbox-star-reply"] = FIELD_EXTRACTORS[
     "email-inbox"
 ] = FIELD_EXTRACTORS["email-inbox-noscroll"] = extract_email_inbox
@@ -1024,14 +1020,13 @@ _add("unicode-test", r'Click on the "(.*)" button\.', ["target"])
 # Enter an item that starts with "Bahr" and ends with "rain".
 # Enter an item that starts with "Tanz" and ends with "ia".
 def extract_use_autocomplete(utterance):
-    match = re.match(
-        r'Enter an item that starts with "([^"]*)" and ends with "([^"]*)"\.', utterance
-    )
-    if match:
+    if match := re.match(
+        r'Enter an item that starts with "([^"]*)" and ends with "([^"]*)"\.',
+        utterance,
+    ):
         return Fields({"start": match.group(1), "end": match.group(2)})
-    else:
-        match = re.match(r'Enter an item that starts with "([^"]*)"', utterance)
-        return Fields({"start": match.group(1)})
+    match = re.match(r'Enter an item that starts with "([^"]*)"', utterance)
+    return Fields({"start": match.group(1)})
 
 
 FIELD_EXTRACTORS["use-autocomplete"] = extract_use_autocomplete
@@ -1125,7 +1120,7 @@ def extract_utterances():
     try:
         task_name = sys.argv[1]
     except:
-        print(sys.stderr, "Usage: {} task_name".format(sys.argv[0]))
+        print(sys.stderr, f"Usage: {sys.argv[0]} task_name")
         exit(1)
     FIELD_EXTRACTORS[task_name] = lambda utt: Fields({})
     from miniwob.environment import MiniWoBEnvironment
@@ -1133,7 +1128,7 @@ def extract_utterances():
     env = MiniWoBEnvironment(task_name)
     base_url = os.environ.get("MINIWOB_BASE_URL")
     env.configure(num_instances=4, seeds=range(4), base_url=base_url)
-    for i in range(25):
+    for _ in range(25):
         states = env.reset()
         for state in states:
             print("UTT:\t{}".format(state.utterance.replace("\n", " ")))

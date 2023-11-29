@@ -11,10 +11,8 @@ if __name__ == "__main__":
     client = Client(port=port)
     if language == 'en':
         from AI_En import Agent
-        myAI = Agent(client, stage, order, save_dir)
     else:
         from AI_Cn import Agent
-        myAI = Agent(client, stage, order, save_dir)
-    
+    myAI = Agent(client, stage, order, save_dir)
     myAI.run()
     client.quit()

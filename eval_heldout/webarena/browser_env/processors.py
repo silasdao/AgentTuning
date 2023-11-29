@@ -118,14 +118,12 @@ class TextObervationProcessor(ObservationProcessor):
         elem_right_bound = x + width
         elem_lower_bound = y + height
 
-        ok = (
+        return (
             elem_left_bound < config["win_right_bound"]
             and elem_right_bound >= config["win_left_bound"]
             and elem_top_bound < config["win_lower_bound"]
             and elem_lower_bound >= config["win_upper_bound"]
         )
-
-        return ok
 
     @beartype
     def retrieve_viewport_info(self, info: BrowserInfo) -> None:
@@ -158,11 +156,7 @@ class TextObervationProcessor(ObservationProcessor):
             if bound is None:
                 return False
             # no width or height
-            if np.isclose(bound[2], 0):
-                return False
-            if np.isclose(bound[3], 0):
-                return False
-            return True
+            return False if np.isclose(bound[2], 0) else not np.isclose(bound[3], 0)
 
         def add_union_bound(idx: int) -> list[float] | None:
             if idx in layout_node_cursor:
@@ -181,14 +175,14 @@ class TextObervationProcessor(ObservationProcessor):
                     tree_bounds[i][2] = tree_bounds[i][0] + tree_bounds[i][2]
                     tree_bounds[i][3] = tree_bounds[i][1] + tree_bounds[i][3]
 
-                if len(tree_bounds) == 0:
+                if not tree_bounds:
                     assert not valid_bbox(node_bound)
                     node_union_bound = [0.0, 0.0, 0.0, 0.0]
                 else:
-                    left_bound = min([b[0] for b in tree_bounds])
-                    top_bound = min([b[1] for b in tree_bounds])
-                    right_bound = max([b[2] for b in tree_bounds])
-                    bottom_bound = max([b[3] for b in tree_bounds])
+                    left_bound = min(b[0] for b in tree_bounds)
+                    top_bound = min(b[1] for b in tree_bounds)
+                    right_bound = max(b[2] for b in tree_bounds)
+                    bottom_bound = max(b[3] for b in tree_bounds)
                     node_union_bound = [
                         left_bound,
                         top_bound,
@@ -498,12 +492,11 @@ class TextObervationProcessor(ObservationProcessor):
         clean_lines: list[str] = []
         for line in tree_str.split("\n"):
             if "statictext" in line.lower():
-                prev_lines = clean_lines[-3:]
                 pattern = r"\[\d+\] StaticText '([^']+)'"
 
-                match = re.search(pattern, line)
-                if match:
+                if match := re.search(pattern, line):
                     static_text = match.group(1)
+                    prev_lines = clean_lines[-3:]
                     if all(
                         static_text not in prev_line
                         for prev_line in prev_lines
@@ -530,9 +523,7 @@ class TextObervationProcessor(ObservationProcessor):
                     tab_titles[idx] = f"Tab {idx}: {open_tabs[idx].title()}"
             tab_title_str = " | ".join(tab_titles)
         except Exception:
-            tab_title_str = " | ".join(
-                ["Tab {idx}" for idx in range(len(open_tabs))]
-            )
+            tab_title_str = " | ".join(["Tab {idx}" for _ in range(len(open_tabs))])
 
         try:
             browser_info = self.fetch_browser_info(page, client)

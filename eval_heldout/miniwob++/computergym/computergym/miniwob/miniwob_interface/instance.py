@@ -86,10 +86,9 @@ class MiniWoBInstance(Thread):
 
         base_url = base_url or self.DEFAULT_BASE_URL
         if subdomain.startswith("flight."):
-            assert not base_url.startswith("file://"), (
-                "For {} domain, MINIWOB_BASE_URL cannot be file://. "
-                ' See "Run a simple server" in README'
-            ).format(subdomain)
+            assert not base_url.startswith(
+                "file://"
+            ), f'For {subdomain} domain, MINIWOB_BASE_URL cannot be file://.  See "Run a simple server" in README'
             self.url = urlparse.urljoin(
                 base_url, subdomain.replace(".", "/") + "/wrapper.html"
             )
@@ -98,7 +97,7 @@ class MiniWoBInstance(Thread):
             self.task_width = self.FLIGHT_TASK_WIDTH
             self.task_height = self.FLIGHT_TASK_HEIGHT
         else:
-            self.url = urlparse.urljoin(base_url, "miniwob/{}.html".format(subdomain))
+            self.url = urlparse.urljoin(base_url, f"miniwob/{subdomain}.html")
             self.window_width = self.WINDOW_WIDTH
             self.window_height = self.WINDOW_HEIGHT
             self.task_width = self.TASK_WIDTH
@@ -157,23 +156,21 @@ class MiniWoBInstance(Thread):
 
     def create_driver(self):
         """Create a driver"""
-        assert not hasattr(self, "driver"), "Instance {} already has a driver".format(
-            self.index
-        )
+        assert not hasattr(
+            self, "driver"
+        ), f"Instance {self.index} already has a driver"
         options = webdriver.ChromeOptions()
         if self.headless:
             options.add_argument("--headless=new")
             options.add_argument("disable-gpu")
             options.add_argument("no-sandbox")
         else:
-            options.add_argument("app=" + self.url)
+            options.add_argument(f"app={self.url}")
             options.add_argument(
                 f"window-size={self.window_width},{self.window_height}"
             )
             options.add_argument(
-                "window-position={},{}".format(
-                    9000, 30 + self.index * (self.window_height + 30)
-                )
+                f"window-position=9000,{30 + self.index * (self.window_height + 30)}"
             )
         self.driver = webdriver.Chrome(options=options)
         self.driver.implicitly_wait(5)
@@ -199,7 +196,7 @@ class MiniWoBInstance(Thread):
             logging.error("Page did not load properly. Wrong MINIWOB_BASE_URL?")
             raise e
         # Seed the seed
-        self.driver.execute_script("Math.seedrandom({});".format(self.init_seed))
+        self.driver.execute_script(f"Math.seedrandom({self.init_seed});")
 
     def close(self):
         """Tear down the WebDriver."""
@@ -251,16 +248,15 @@ class MiniWoBInstance(Thread):
         rewards[i] = self.reward_processor(metadata)
         dones[i] = metadata["done"]
 
-        if action is not None:
-            if not metadata["done"]:
-                states[i] = self.get_state()
-        else:
+        if action is None:
             if self.prev_state is not None:
                 states[i] = self.prev_state
             else:
                 assert self.initial_state is not None
                 states[i] = self.initial_state
 
+        elif not metadata["done"]:
+            states[i] = self.get_state()
         metadata["elapsed"] = max(0.0, time.time() - self.start_time)
         info_n[i] = metadata
 
@@ -299,9 +295,7 @@ class MiniWoBInstance(Thread):
                     break
                 time.sleep(self.RESET_BLOCK_SLEEP_TIME)
             else:
-                raise RuntimeError(
-                    "Instance {} does not load properly".format(self.index)
-                )
+                raise RuntimeError(f"Instance {self.index} does not load properly")
         elif self.wait_ms:
             time.sleep(self.wait_ms / 1000.0)
         self.start_time = time.time()
@@ -350,18 +344,17 @@ class MiniWoBInstance(Thread):
         html_body = self.driver.find_element(By.ID, "wrap").get_attribute("outerHTML")
 
         whole_html = self.driver.find_element(By.TAG_NAME, "body")
-        html_extra = ""
-        for child in whole_html.find_elements(By.XPATH, "*"):
-            if child.get_attribute("id") in [
+        html_extra = "".join(
+            child.get_attribute("outerHTML")
+            for child in whole_html.find_elements(By.XPATH, "*")
+            if child.get_attribute("id")
+            not in [
                 "reward-display",
                 "click-canvas",
                 "sync-task-cover",
                 "wrap",
-            ]:
-                continue
-            else:
-                html_extra += child.get_attribute("outerHTML")
-
+            ]
+        )
         state = MiniWoBState(utterance, fields, dom_info, html_body, html_extra)
         # Get screenshot if requested
         if self.record_screenshots:
@@ -408,7 +401,7 @@ class MiniWoBInstance(Thread):
             attention = attention.tolist()
         encoded = json.dumps(attention)
         # Send to the driver
-        self.driver.execute_script("core.visualizeAttention({});".format(encoded))
+        self.driver.execute_script(f"core.visualizeAttention({encoded});")
 
     def set_seed(self, seed):
         """Set the seed to a new value.
@@ -416,7 +409,7 @@ class MiniWoBInstance(Thread):
         Args:
             seed (object)
         """
-        self.driver.execute_script("Math.seedrandom({});".format(repr(seed)))
+        self.driver.execute_script(f"Math.seedrandom({repr(seed)});")
 
     def set_mode(self, mode):
         """Set the task generation mode (e.g., "train" or "test") to a new value.
@@ -424,4 +417,4 @@ class MiniWoBInstance(Thread):
         Args:
             mode (str)
         """
-        self.driver.execute_script('core.setDataMode("{}");'.format(mode))
+        self.driver.execute_script(f'core.setDataMode("{mode}");')

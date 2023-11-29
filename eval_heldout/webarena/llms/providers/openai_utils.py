@@ -268,7 +268,6 @@ def generate_from_openai_chat_completion(
 
 
 @retry_with_exponential_backoff
-# debug only
 def fake_generate_from_openai_chat_completion(
     messages: list[dict[str, str]],
     model: str,
@@ -284,5 +283,4 @@ def fake_generate_from_openai_chat_completion(
         )
     openai.api_key = os.environ["OPENAI_API_KEY"]
     if os.environ.get('OPENAI_API_BASE'): openai.api_base = os.environ.get('OPENAI_API_BASE')
-    answer = "Let's think step-by-step. This page shows a list of links and buttons. There is a search box with the label 'Search query'. I will click on the search box to type the query. So the action I will perform is \"click [60]\"."
-    return answer
+    return "Let's think step-by-step. This page shows a list of links and buttons. There is a search box with the label 'Search query'. I will click on the search box to type the query. So the action I will perform is \"click [60]\"."

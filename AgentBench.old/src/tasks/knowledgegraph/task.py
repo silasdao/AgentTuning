@@ -124,10 +124,7 @@ class KnowledgeGraph(Task):
                 recall = TP / (TP + FN)
                 F1 = 2 * precision * recall / (precision + recall)
                 F1_sum += F1
-            if count == 0:
-                return 0
-            else:
-                return F1_sum / count
+            return 0 if count == 0 else F1_sum / count
 
         def EM(outputs, targets):
             em_sum = 0
@@ -141,11 +138,7 @@ class KnowledgeGraph(Task):
                 if len(gold_answer.intersection(predicted_answer)) == len(gold_answer) and len(gold_answer.intersection(predicted_answer)) == len(predicted_answer):
                     em_sum += 1
 
-            if count == 0:
-                return 0
-            else:
-                return em_sum / count
-            
+            return 0 if count == 0 else em_sum / count        
 
         def executability(outputs):
             count = 0
@@ -156,11 +149,7 @@ class KnowledgeGraph(Task):
                 count += 1
                 if outputs[i]['predict'] is not None and len(outputs[i]['predict']) > 0:
                     executability_sum += 1
-            if count == 0:
-                return 0
-            else:
-                return executability_sum / count
-            
+            return 0 if count == 0 else executability_sum / count        
 
         def triple_each(outputs, targets):
             num = len(outputs)
@@ -180,9 +169,7 @@ class KnowledgeGraph(Task):
             data_object = json.load(f)
         for item in data_object:
             answer = item.pop("answer")
-            gold_answer = set()
-            for a in answer:
-                gold_answer.add(a["answer_argument"])
+            gold_answer = {a["answer_argument"] for a in answer}
             data.append(DataPiece(item, gold_answer))  # input and target
         return data
 
@@ -191,7 +178,7 @@ class KnowledgeGraph(Task):
         answer = []
         actions = []
         variables_list = []
-        
+
         question = data_item["question"]
         entities = data_item["entities"]
 
@@ -209,18 +196,24 @@ class KnowledgeGraph(Task):
                 session.inject({"role": "user", "content": shot})
             else:
                 session.inject({"role": "agent", "content": shot})
-        session.inject({"role": "user", "content": "A new question: " + question + "\nEntities: " + f"[{', '.join([entity for entity in entities])}]"})
-        
-        
+        session.inject(
+            {
+                "role": "user",
+                "content": f"A new question: {question}"
+                + "\nEntities: "
+                + f"[{', '.join(list(entities))}]",
+            }
+        )
+            
+
         for i in range(self.round):
             message = session.action()
             message = message.split("Observation:")[0]
             message = message.replace("\\_", "_")
             session.history[-1]["content"] = message
-            # print({"role": "agent", "content": message})
-
-            final_answer = re.findall(r'(?:Find|Final) Answer: #(\d+)', message)
-            if final_answer:
+            if final_answer := re.findall(
+                r'(?:Find|Final) Answer: #(\d+)', message
+            ):
                 try:
                     answer_variable = variables_list[int(final_answer[0])]
                 except IndexError:
@@ -241,9 +234,9 @@ class KnowledgeGraph(Task):
                         for function_name in function_names:
                             try:
                                 func = getattr(sys.modules[__name__], function_name)
-                                matches = re.findall(r'{}\((.+?)\)'.format(function_name), line)
+                                matches = re.findall(f'{function_name}\((.+?)\)', line)
                                 arguments = re.split(r'\s*,\s*', matches[0])
-                                ori_arguments = [argument for argument in arguments]
+                                ori_arguments = list(arguments)
                                 for i, argument in enumerate(arguments):
                                     argument = argument.replace("variable ", "")
                                     argument = argument.replace("Variable ", "")
@@ -273,18 +266,18 @@ class KnowledgeGraph(Task):
                                         execution_message = f"{function_name}({', '.join(ori_arguments)}) cannot be executed. The two variables are not of the same type. You may further explore them by call get_relations"
                                 except UnboundLocalError:
                                     execution_message = f"I may make a syntax error when calling {function_name} (e.g., unmatched parenthesis). I need to fix it and reuse the tool"
-                                
+
                                 continue
-                        
+
                         if not function_executed:
                             session.inject({"role": "user", "content": execution_message})
                             # print({"role": "user", "content": execution_message})
-                        
+
                         break  # should at most be one line starts with Action
-                
+
                 if not find_action:  # only for ChatGLM-130B to make sure the conversation alternates properly
                     session.inject({"role": "user", "content": "No executable function found! Need to recheck the action."})
                     # print({"role": "user", "content": "No executable function found! Need to recheck the action."})
-                        
+
 
         return {"predict": answer, "actions": actions}

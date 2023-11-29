@@ -68,13 +68,7 @@ class Mind2Web(Task):
         }
 
     def metric(self, output: List[Dict], target: List[Dict]):
-        prediction = []
-        for x in output:
-            prediction.append(x['final_prediction'])
-            # if x is not None:
-            #     prediction.append(x['final_prediction'])
-            # else:
-            #     prediction.append(None)
+        prediction = [x['final_prediction'] for x in output]
         all_element_acc, all_action_f1, all_step_sr = [], [], []
         assert len(target) == len(prediction)
         for pred, tar in zip(prediction, target):
@@ -93,14 +87,13 @@ class Mind2Web(Task):
                 all_step_sr.append(1)
             else:
                 all_step_sr.append(0)
-        overall = {
+        return {
             'element_acc': sum(all_element_acc) / len(all_element_acc) * 100,
             'action_f1': np.mean(all_action_f1) * 100,
             'step_sr': np.mean(all_step_sr) * 100,
             'each_f1': all_action_f1,
-            'each_sr': all_step_sr
+            'each_sr': all_step_sr,
         }
-        return overall
     
     def get_data(self): 
         ret = Dataset()
@@ -112,7 +105,7 @@ class Mind2Web(Task):
                 pos_ids = [c["backend_node_id"] for c in pos_candidates]
                 sample.pop("pos_candidates")
                 sample["pos_ids"] = pos_ids
-                if len(pos_ids) == 0:
+                if not pos_ids:
                     ret.append(DataPiece(sample, None))
                     continue
                 _, _, target_out, _ = format_input_multichoice(
@@ -121,31 +114,33 @@ class Mind2Web(Task):
                 _, target_action = self.postprocess_action(target_out)
                 target = {'element': pos_ids, 'action': target_action}
                 ret.append(DataPiece(sample, target))
-                idx += 1 
+                idx += 1
                 if idx >= self.count:
                     break
         # Candidate generator
         for k in [5, 10, 20, 50]:
             recall_at_k = np.mean(
                 [
-                    1 if any([c["rank"] < k for c in sample["pos_candidates"]]) else 0
+                    1
+                    if any(c["rank"] < k for c in sample["pos_candidates"])
+                    else 0
                     for sample in test_dataset.data
                 ]
             )
             print(f"Recall Cap @ {k}: {recall_at_k}")
         acc = np.mean(
-                [
-                    1 if any([c["rank"] == 0 for c in sample["pos_candidates"]]) else 0
-                    for sample in test_dataset.data
-                ]
-            )
+            [
+                1 if any(c["rank"] == 0 for c in sample["pos_candidates"]) else 0
+                for sample in test_dataset.data
+            ]
+        )
         print(f"Candidate generator acc: {acc}")
         return ret          
 
     def predict_single(self, session: Session, sample: Dict): 
         if len(sample["pos_ids"]) == 0:
             return {"final_prediction":  ('', ''), "outputs": []}
-        pos_ids = sample["pos_ids"]        
+        pos_ids = sample["pos_ids"]
         neg_candidates = sample["neg_candidates"]
         neg_candidates = [c for c in neg_candidates if c["rank"] < self.top_k]
         neg_ids = [c["backend_node_id"] for c in neg_candidates]
@@ -165,7 +160,7 @@ class Mind2Web(Task):
             self.prompt_template[-1][
                     "content"
                 ] = f"'''\n{seq_context}\n'''\n\n{seq_in}"
-            
+
             session.history = []
             output = fetch_data(session, self.prompt_template)
             # print(session.history[-1])
@@ -181,7 +176,7 @@ class Mind2Web(Task):
                     final_prediction = (pred_element, pred_action)
                 except IndexError:
                     print(f"IndexError: {output}")
-        if final_prediction == None or len(all_candidates) == 0:
+        if final_prediction is None or len(all_candidates) == 0:
             final_prediction = ('', '')
         return {"final_prediction": final_prediction, "outputs": outputs}
     
@@ -195,7 +190,7 @@ class Mind2Web(Task):
         action = action.group(1) if action is not None else ""
         value = re.search(r"Value: (.*)$", text, re.MULTILINE)
         value = value.group(1) if value is not None else ""
-        return selected_option, action.strip() + " " + value.strip()
+        return selected_option, f"{action.strip()} {value.strip()}"
 
     def postprocess_action_llm(self, text):
         # C.
@@ -210,14 +205,14 @@ class Mind2Web(Task):
         action = action.group(1) if action is not None else ""
         value = re.search(r"Value: (.*)$", text, re.MULTILINE)
         value = value.group(1) if value is not None else ""
-        return selected_option, action.strip() + " " + value.strip()
+        return selected_option, f"{action.strip()} {value.strip()}"
 
     def calculate_f1(self, pred, label):
         pred = set(pred.strip().split())
         label = set(label.strip().split())
-        if len(pred) == 0 and len(label) == 0:
+        if not pred and not label:
             return 1
-        if len(pred) == 0 or len(label) == 0:
+        if not pred or not label:
             return 0
 
         tp = len(pred & label)
@@ -227,5 +222,4 @@ class Mind2Web(Task):
         recall = tp / (tp + fn)
         if precision == 0 or recall == 0:
             return 0
-        f1 = 2 * precision * recall / (precision + recall)
-        return f1
+        return 2 * precision * recall / (precision + recall)

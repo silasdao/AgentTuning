@@ -26,15 +26,14 @@ def evaluate(agent, env, split, nb_episodes=10):
         total_score = 0
         for method in ['greedy']:
             for ep in range(nb_episodes):
-                log("Starting {} episode {}".format(split, ep))
+                log(f"Starting {split} episode {ep}")
                 if split == 'eval':
                     score = evaluate_episode(agent, env, split, method)
                 elif split == 'test':
                     score = evaluate_episode(agent, env, split, method, idx=ep)
-                log("{} episode {} ended with score {}\n\n".format(split, ep, score))
+                log(f"{split} episode {ep} ended with score {score}\n\n")
                 total_score += score
-        avg_score = total_score / nb_episodes
-        return avg_score
+        return total_score / nb_episodes
 
 
 def evaluate_episode(agent, env, split, method='greedy', idx=None):
@@ -42,16 +41,16 @@ def evaluate_episode(agent, env, split, method='greedy', idx=None):
     done = False
     ob, info = env.reset(idx)
     state = agent.build_state(ob, info)
-    log('Obs{}: {}'.format(step, ob.encode('utf-8')))
+    log(f"Obs{step}: {ob.encode('utf-8')}")
     while not done:
         valid_acts = info['valid']
         with torch.no_grad():
             action_str = agent.act([state], [valid_acts], method=method)[0][0]
-        log('Action{}: {}'.format(step, action_str))
+        log(f'Action{step}: {action_str}')
         ob, rew, done, info = env.step(action_str)
-        log("Reward{}: {}, Score {}, Done {}".format(step, rew, info['score'], done))
+        log(f"Reward{step}: {rew}, Score {info['score']}, Done {done}")
         step += 1
-        log('Obs{}: {}'.format(step, ob.encode('utf-8')))
+        log(f"Obs{step}: {ob.encode('utf-8')}")
         state = agent.build_state(ob, info)
     tb.logkv_mean(f'{split}Score', info['score'])
     # category = env.session['goal']['category']
@@ -59,7 +58,7 @@ def evaluate_episode(agent, env, split, method='greedy', idx=None):
     if 'verbose' in info:
         for k, v in info['verbose'].items():
             if k.startswith('r'):
-                tb.logkv_mean(f'{split}_' + k, v)
+                tb.logkv_mean(f'{split}_{k}', v)
     return info['score']
 
 
@@ -85,16 +84,16 @@ def train(agent, eval_env, test_env, envs, args):
     for step in range(1, args.max_steps + 1):
         # get actions from policy
         action_strs, action_ids, values = agent.act(states, valids, method=args.exploration_method)
-        
+
         # log envs[0]
         with torch.no_grad():
             action_values, _ = agent.network.rl_forward(states[:1], agent.encode_valids(valids[:1]))
         actions = sorted(zip(state0[1]['valid'], action_values.tolist()), key=lambda x: - x[1])
-        log('State  {}: {}'.format(step, state0[0].lower().encode('utf-8')))
-        log('Goal   {}: {}'.format(step, state0[1]['goal'].lower().encode('utf-8')))
-        log('Actions{}: {}'.format(step, actions))
-        log('>> Values{}: {}'.format(step, float(values[0])))
-        log('>> Action{}: {}'.format(step, action_strs[0]))
+        log(f"State  {step}: {state0[0].lower().encode('utf-8')}")
+        log(f"Goal   {step}: {state0[1]['goal'].lower().encode('utf-8')}")
+        log(f'Actions{step}: {actions}')
+        log(f'>> Values{step}: {float(values[0])}')
+        log(f'>> Action{step}: {action_strs[0]}')
         state0 = None
 
         # step in envs
@@ -115,7 +114,7 @@ def train(agent, eval_env, test_env, envs, args):
                     reward_str = f'{reward/10:.2f} = ({r_att:.2f} * {w_att:.2f} + {r_option:.2f} * {w_option:.2f} + {r_price:.2f} * {w_price:.2f}) * {r_type:.2f}'
                 else:
                     reward_str = str(reward)
-                log('Reward{}: {}, Done {}\n'.format(step, reward_str, done))
+                log(f'Reward{step}: {reward_str}, Done {done}\n')
             next_state = agent.build_state(ob, info)
             next_valid = info['valid']
             next_states, next_valids, rewards, dones = \

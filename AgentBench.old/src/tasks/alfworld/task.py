@@ -71,11 +71,11 @@ class ALFWorld(Task):
 
     def final_score(self, results: List[Dict], targets: List[None]):
         try:
-            completions = []
-            for res in results:
-                if res.get("msg", None) is not None:
-                    continue
-                completions.append(int(res.get("result", 0)))
+            completions = [
+                int(res.get("result", 0))
+                for res in results
+                if res.get("msg", None) is None
+            ]
             success = np.sum(completions)
             return {"completion": int(success), "total": len(completions), "rate": int(success) / len(completions), "main": int(success) / len(completions)}
         except Exception as e:
@@ -93,7 +93,7 @@ class ALFWorld(Task):
         return ret
 
     def predict_all(self, agent: Agent, inputs: List) -> List:
-        print(f"Start Predicting All ...")
+        print("Start Predicting All ...")
 
         count = self.workers
         if self.worker_limit:
@@ -102,9 +102,9 @@ class ALFWorld(Task):
         executor = ProcessPoolExecutor(max_workers=count)
         results = []
         processes = []
-        
+
         parameters = [(input_, agent, index) for index, input_ in enumerate(inputs)]
-        for idx, parameter in enumerate(parameters):
+        for parameter in parameters:
             future = executor.submit(self.call_wrap, parameter)
             processes.append(future)
 
@@ -112,7 +112,7 @@ class ALFWorld(Task):
             for process in as_completed(processes):
                 results.append(process.result())
                 pbar.update(1)
-        
+
         return results
 
     def call_wrap(self, parameters):
@@ -130,14 +130,14 @@ class ALFWorld(Task):
         except Exception as e:
             result = 0
             log_info = {"msg": f"error {e}"}
-        log_info.update({"result": result})
-        log_info.update({"agent": agent_name})
+        log_info["result"] = result
+        log_info["agent"] = agent_name
 
         try:
             del env
         except:
             pass
-        
+
         print("finished one game")
         return log_info
 
@@ -148,8 +148,7 @@ class ALFWorld(Task):
     def get_prompt(self, filename: str):
         for k,v in self.prefixes.items():
             if filename.startswith(k):
-                example = self.prompts[v]
-                return example
+                return self.prompts[v]
         raise Exception(f"unsupported name: {filename}")
 
     def inject_info(self, session: Session, history: List):
@@ -167,8 +166,6 @@ class ALFWorld(Task):
         ob, info = env.reset()
         ob = '\n'.join(ob[0].split('\n\n')[1:])
         name = '/'.join(info['extra.gamefile'][0].split('/')[-3:-1])
-        log_info = {}
-        log_info["log"] = []
         session.inject({"role": "user", "content": self.get_task_instruction()})
         session.inject({"role": "agent", "content": "OK. I'll follow your instructions and try my best to solve the task."})
 
@@ -177,8 +174,10 @@ class ALFWorld(Task):
         history[0] = "Here is one example.\n" + history[0]
         self.inject_info(session, history)
 
-        init_prompt = "Here is your task. " + ob + self.get_available_actions(info.get('admissible_commands', [[]])[0])
-        log_info["init_prompt"] = init_prompt
+        init_prompt = f"Here is your task. {ob}" + self.get_available_actions(
+            info.get('admissible_commands', [[]])[0]
+        )
+        log_info = {"log": [], "init_prompt": init_prompt}
         session.inject({"role": "user", "content": init_prompt})
 
         # interact
@@ -204,7 +203,7 @@ class ALFWorld(Task):
                 "done": done,
             }
             log_info["log"].append(payload)
-            
+
             # failure test
             if len(log_info["log"]) > 3:
                 pre_logs = log_info["log"][-3:]
@@ -212,7 +211,7 @@ class ALFWorld(Task):
                 if len(list(set(pre_acts))) == 1:
                     print("repeat actions for 3 times: failure")
                     return 0, log_info
-            
+
             if done:
                 return reward, log_info
         return 0, log_info

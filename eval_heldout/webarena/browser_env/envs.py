@@ -178,15 +178,13 @@ class ScriptBrowserEnv(Env[dict[str, Observation], Action]):
 
     @beartype
     def _get_obs(self) -> dict[str, Observation]:
-        obs = self.observation_handler.get_observation(
+        return self.observation_handler.get_observation(
             self.page, self.get_page_client(self.page)
         )
-        return obs
 
     @beartype
     def _get_obs_metadata(self) -> dict[str, ObservationMetadata]:
-        metadata = self.observation_handler.get_observation_metadata()
-        return metadata
+        return self.observation_handler.get_observation_metadata()
 
     @beartype
     def reset(
@@ -268,11 +266,4 @@ class ScriptBrowserEnv(Env[dict[str, Observation], Action]):
             "fail_error": fail_error,
             "observation_metadata": observation_metadata,
         }
-        msg = (
-            observation,
-            float(success),  # reward
-            False,  # terminated
-            False,  # truncated
-            info,
-        )
-        return msg
+        return observation, float(success), False, False, info

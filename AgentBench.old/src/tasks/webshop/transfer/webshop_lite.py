@@ -24,7 +24,7 @@ def index(session_id, **kwargs):
 @app.route('/', methods=['GET', 'POST'])
 def search_results(data):
     path = os.path.join(TEMPLATE_DIR, 'results_page.html')
-    html = render_template_string(
+    return render_template_string(
         read_html_template(path=path),
         session_id=SESSION_ID,
         products=data,
@@ -33,12 +33,11 @@ def search_results(data):
         total=len(data),
         instruction_text=QUERY,
     )
-    return html
 
 @app.route('/', methods=['GET', 'POST'])
 def item_page(session_id, asin, keywords, page, options):
     path = os.path.join(TEMPLATE_DIR, 'item_page.html')
-    html = render_template_string(
+    return render_template_string(
         read_html_template(path=path),
         session_id=session_id,
         product_info=product_map[asin],
@@ -46,29 +45,27 @@ def item_page(session_id, asin, keywords, page, options):
         page=page,
         asin=asin,
         options=options,
-        instruction_text=QUERY
+        instruction_text=QUERY,
     )
-    return html
 
 @app.route('/', methods=['GET', 'POST'])
 def item_sub_page(session_id, asin, keywords, page, sub_page, options):
-    path = os.path.join(TEMPLATE_DIR, sub_page.value.lower() + "_page.html")
-    html = render_template_string(
+    path = os.path.join(TEMPLATE_DIR, f"{sub_page.value.lower()}_page.html")
+    return render_template_string(
         read_html_template(path),
-        session_id=session_id, 
+        session_id=session_id,
         product_info=product_map[asin],
         keywords=keywords,
         page=page,
         asin=asin,
         options=options,
-        instruction_text=QUERY
+        instruction_text=QUERY,
     )
-    return html
 
 @app.route('/', methods=['GET', 'POST'])
 def done(asin, options, session_id, **kwargs):
     path = os.path.join(TEMPLATE_DIR, 'done_page.html')
-    html = render_template_string(
+    return render_template_string(
         read_html_template(path),
         session_id=session_id,
         reward=1,
@@ -83,7 +80,6 @@ def done(asin, options, session_id, **kwargs):
         category=kwargs.get('category'),
         product_category=kwargs.get('product_category'),
     )
-    return html
     
 # Project Dictionary Information onto Fake Amazon
 def dict_to_fake_html(data, page_type, asin=None, sub_page_type=None, options=None, prod_map={}, query=""):

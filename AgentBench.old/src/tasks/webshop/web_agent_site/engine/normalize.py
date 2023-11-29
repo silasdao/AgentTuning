@@ -56,22 +56,22 @@ SIZE_PATTERNS = [re.compile(s) for s in SIZE_SET] + SIZE_PATTERNS
 
 def normalize_color(color_string: str) -> str:
     """Extracts the first color found if exists"""
-    for norm_color in COLOR_SET:
-        if norm_color in color_string:
-            return norm_color
-    return color_string
+    return next(
+        (norm_color for norm_color in COLOR_SET if norm_color in color_string),
+        color_string,
+    )
 
 def normalize_color_size(product_prices: dict) -> Tuple[dict, dict]:
     """Get mappings of all colors, sizes to corresponding values in COLOR_SET, SIZE_PATTERNS"""
     
     # Get all colors, sizes from list of all products
     all_colors, all_sizes = set(), set()
-    for (_, color, size), _ in product_prices.items():
+    for _, color, size in product_prices:
         all_colors.add(color.lower())
         all_sizes.add(size.lower())
-    
+
     # Create mapping of each original color value to corresponding set value
-    color_mapping = {'N.A.': 'not_matched'} 
+    color_mapping = {'N.A.': 'not_matched'}
     for c in all_colors:
         matched = False
         for base in COLOR_SET:
@@ -98,6 +98,6 @@ def normalize_color_size(product_prices: dict) -> Tuple[dict, dict]:
                 matched= True
         if not matched:
             size_mapping[s] = 'not_matched'
-    
+
     return color_mapping, size_mapping
     

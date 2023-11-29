@@ -165,10 +165,8 @@ def early_stop(
     last_k_actions = trajectory[1::2][-k:]  # type: ignore[assignment]
     if len(last_k_actions) >= k:
         if all(
-            [
-                action["action_type"] == ActionTypes.NONE
-                for action in last_k_actions
-            ]
+            action["action_type"] == ActionTypes.NONE
+            for action in last_k_actions
         ):
             return True, f"Failed to parse actions for {k} times"
 
@@ -182,23 +180,19 @@ def early_stop(
 
     last_action: Action = action_seq[-1]
 
-    if last_action["action_type"] != ActionTypes.TYPE:
-        if len(last_k_actions) >= k:
-            if all(
-                [
-                    is_equivalent(action, last_action)
-                    for action in last_k_actions
-                ]
-            ):
-                return True, f"Same action for {k} times"
-
-    else:
+    if last_action["action_type"] == ActionTypes.TYPE:
         # check the action sequence
         if (
-            sum([is_equivalent(action, last_action) for action in action_seq])
+            sum(is_equivalent(action, last_action) for action in action_seq)
             >= k
         ):
             return True, f"Same typing action for {k} times"
+
+    elif len(last_k_actions) >= k:
+        if all(
+            is_equivalent(action, last_action) for action in last_k_actions
+        ):
+            return True, f"Same action for {k} times"
 
     return False, ""
 
@@ -415,8 +409,7 @@ if __name__ == "__main__":
     else:
         st_idx = args.test_start_idx
         ed_idx = args.test_end_idx
-        for i in range(st_idx, ed_idx):
-            test_file_list.append(f"config_files/{i}.json")
+        test_file_list.extend(f"config_files/{i}.json" for i in range(st_idx, ed_idx))
     test_file_list = get_unfinished(test_file_list, args.result_dir)
     print(f"Total {len(test_file_list)} tasks left")
     args.render = False

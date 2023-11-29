@@ -132,7 +132,7 @@ class MiniWoBCoordClick(MiniWoBAction):
         return self._top
 
     def __str__(self):
-        return "CoordClick(coords: ({}, {}))".format(self.left, self.top)
+        return f"CoordClick(coords: ({self.left}, {self.top}))"
 
     __repr__ = __str__
 
@@ -171,7 +171,7 @@ class MiniWoBElementClickId(MiniWoBAction):
         chain.move_to_element(element).click().perform()
 
     def __str__(self):
-        return "click(id = {})".format(self.id)
+        return f"click(id = {self.id})"
 
     __repr__ = __str__
 
@@ -253,7 +253,7 @@ class MiniWoBElementClickXpath(MiniWoBAction):
             print("Click noninteractable element")
 
     def __str__(self):
-        return "click(xpath = {})".format(self.xpath)
+        return f"click(xpath = {self.xpath})"
 
     __repr__ = __str__
 
@@ -298,14 +298,12 @@ class MiniWoBType(MiniWoBAction):
         return self._text
 
     def __str__(self):
-        return "Type({})".format(repr(self._text))
+        return f"Type({repr(self._text)})"
 
     __repr__ = __str__
 
     def __eq__(self, other):
-        if not isinstance(other, MiniWoBType):
-            return False
-        return self.text == other.text
+        return False if not isinstance(other, MiniWoBType) else self.text == other.text
 
     def __hash__(self):
         return hash((self.__class__.__name__, self.text))
@@ -337,7 +335,7 @@ class MiniWoBElementClickOption(MiniWoBAction):
         select.select_by_visible_text(option_element.text)
 
     def __str__(self):
-        return "clickoption(xpath = {})".format(self.id)
+        return f"clickoption(xpath = {self.id})"
 
     __repr__ = __str__
 
@@ -376,7 +374,5 @@ class MiniWoBMoveXpath(MiniWoBAction):
                 action_performed = True
             except Exception as e:
                 print(e)
-                pass
-
         if not action_performed:
             raise ValueError("Click noninteractable element")

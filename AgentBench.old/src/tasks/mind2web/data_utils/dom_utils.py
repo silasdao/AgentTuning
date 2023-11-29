@@ -49,8 +49,7 @@ def clean_tree(dom_tree, all_candidate_ids):
             if attr == "class" and node.attrib[attr] and node.tag == "svg":
                 icon_texts = re.findall(r"\S*icon\S*", node.attrib[attr], re.IGNORECASE)
                 icon_texts = [clean_text(text) for text in icon_texts]
-                icon_texts = [text for text in icon_texts if text]
-                if icon_texts:
+                if icon_texts := [text for text in icon_texts if text]:
                     node.attrib[attr] = " ".join(icon_texts)
                 else:
                     node.attrib.pop(attr)
@@ -81,7 +80,7 @@ def clean_tree(dom_tree, all_candidate_ids):
         elif (
             node.attrib.get("backend_node_id", "") not in all_candidate_ids
             and len(node.attrib) == 1
-            and not any([x.tag == "text" for x in node.getchildren()])
+            and all(x.tag != "text" for x in node.getchildren())
             and node.getparent() is not None
             and len(node.getchildren()) <= 1
         ):
@@ -153,7 +152,7 @@ def prune_tree(
                 node.attrib.pop("backend_node_id", None)
             if (
                 len(node.attrib) == 0
-                and not any([x.tag == "text" for x in node.getchildren()])
+                and all(x.tag != "text" for x in node.getchildren())
                 and node.getparent() is not None
                 and node.tag != "text"
                 and len(node.getchildren()) <= 1
@@ -202,7 +201,7 @@ def get_attribute_repr(node, max_value_length=5, max_length=20):
             value = " ".join([v for v in value if len(v) < 15][:max_value_length])
             if value and value not in attr_values_set:
                 attr_values_set.add(value)
-                attr_values += value + " "
+                attr_values += f"{value} "
     uid = node.attrib.get("backend_node_id", "")
     # clear all attributes
     node.attrib.clear()
@@ -216,10 +215,7 @@ def get_attribute_repr(node, max_value_length=5, max_length=20):
 def get_tree_repr(
     tree, max_value_length=5, max_length=20, id_mapping={}, keep_html_brackets=False
 ):
-    if isinstance(tree, str):
-        tree = etree.fromstring(tree)
-    else:
-        tree = copy.deepcopy(tree)
+    tree = etree.fromstring(tree) if isinstance(tree, str) else copy.deepcopy(tree)
     for node in tree.xpath("//*"):
         if node.tag != "text":
             if "backend_node_id" in node.attrib:

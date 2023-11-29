@@ -72,7 +72,7 @@ def get_synthetic_goals(all_products, product_prices):
         if ('instruction_text' not in product or 
             product['instruction_text'] is None):
             continue
-        product_goals = []        
+        product_goals = []
         asin = product['asin']
         attributes = product['instruction_attributes']
         assert len(attributes) > 0
@@ -106,7 +106,7 @@ def get_synthetic_goals(all_products, product_prices):
             option_text = ', and '.join([
                 f'{k}: {v}' for k, v in goal_options.items()
             ])
-            option_text = ' with ' + option_text if option_text else ''
+            option_text = f' with {option_text}' if option_text else ''
             product_goals.append({
                 'asin': asin,
                 'category': product['category'],
@@ -144,16 +144,18 @@ def get_type_reward(purchased_product, goal):
     desired_type_parse = nlp(desired_type)
 
     purchased_type_parse = [t.text.lower() for t in purchased_type_parse if t.pos_ in ('PNOUN', 'NOUN', 'PROPN')]
-    desired_type_parse = [t.text.lower() for t in desired_type_parse if t.pos_ in ('PNOUN', 'NOUN', 'PROPN')]
-
-    n_intersect_type = len(
-        set(purchased_type_parse) & set(desired_type_parse)
-    )
-    if len(desired_type_parse) == 0:
-        title_score = 0.2
-    else:
+    if desired_type_parse := [
+        t.text.lower()
+        for t in desired_type_parse
+        if t.pos_ in ('PNOUN', 'NOUN', 'PROPN')
+    ]:
+        n_intersect_type = len(
+            set(purchased_type_parse) & set(desired_type_parse)
+        )
         title_score = n_intersect_type / len(desired_type_parse)
 
+    else:
+        title_score = 0.2
     r_type = 1.0
 
     # Adjust r_type score based on query, category title matching/scores
@@ -163,7 +165,7 @@ def get_type_reward(purchased_product, goal):
 
     if title_score < 0.1:
         r_type = 0.1
-    
+
     if title_score == 0.0:
         r_type = 0.0
 
@@ -219,9 +221,9 @@ def get_option_reward(purchased_options, goal_options):
             if score > 85:
                 num_option_matches += 1
                 break
-    
+
     # Calculate option reward as fraction of goal options hit
-    r_option = num_option_matches / len(goal_options) if len(goal_options) > 0 else None
+    r_option = num_option_matches / len(goal_options) if goal_options else None
     return r_option, num_option_matches
 
 

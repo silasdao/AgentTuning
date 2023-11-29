@@ -9,14 +9,14 @@ def process_file(path):
     try_times = [0, 0]
     full_play = [1, 1]
     round_num = len(replay) - 1
-    
+
     last_round = replay[-2]
-    
+
     if 'errors' in last_round:
         error = last_round['errors'][0]
         error_player = error['player']
         full_play[error_player] = 0
-    
+
     if last_round['players'][0]['id'] == 0:
         for fish_0 in last_round['players'][0]['fight_fish']:
             damage[1] += 400 - max(fish_0['hp'], 0)
@@ -31,25 +31,25 @@ def process_file(path):
         for fish_1 in last_round['players'][1]['fight_fish']:
             damage[1] += 400 - max(fish_1['hp'], 0)
             takedown[1] += 1 if fish_1['hp'] <= 0 else 0
-    
+
     if os.path.exists(os.path.join(path, 'thinking_process_0.jsonl')):
-        for data in open(os.path.join(path, 'thinking_process_0.jsonl')).readlines():
+        for data in open(os.path.join(path, 'thinking_process_0.jsonl')):
             data = json.loads(data)
             try_times[0] += data['try_times']
     if os.path.exists(os.path.join(path, 'guess_process_0.jsonl')):
-        for data in open(os.path.join(path, 'guess_process_0.jsonl')).readlines():
+        for data in open(os.path.join(path, 'guess_process_0.jsonl')):
             data = json.loads(data)
             try_times[0] += data['try_times']
-    
+
     if os.path.exists(os.path.join(path, 'thinking_process_1.jsonl')):
-        for data in open(os.path.join(path, 'thinking_process_1.jsonl')).readlines():
+        for data in open(os.path.join(path, 'thinking_process_1.jsonl')):
             data = json.loads(data)
             try_times[1] += data['try_times']
     if os.path.exists(os.path.join(path, 'guess_process_1.jsonl')):
-        for data in open(os.path.join(path, 'guess_process_1.jsonl')).readlines():
+        for data in open(os.path.join(path, 'guess_process_1.jsonl')):
             data = json.loads(data)
             try_times[1] += data['try_times']
-    
+
     return full_play, try_times, takedown, damage, win, round_num
 
 def calculate(result_dir, agent):
